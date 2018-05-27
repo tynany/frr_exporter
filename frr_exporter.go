@@ -54,6 +54,7 @@ func parseFlags() {
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 }
+
 func main() {
 	parseFlags()
 

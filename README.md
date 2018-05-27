@@ -53,7 +53,7 @@ go build
 Adding a new collector can be achieved by implementing a new Collector interface and adding it to the collectors slice in the main package.
 
 ## TODO
- - Tests
+ - Collector and main tests
  - OSPF6
  - isis
  - Additional BGP address families

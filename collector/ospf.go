@@ -48,17 +48,38 @@ func (*OSPFCollector) EnabledByDefault() bool {
 }
 
 func (c *OSPFCollector) scrape(ch chan<- prometheus.Metric) error {
-	jsonOSPFInterface, err := getOSPFSummary()
+	jsonOSPFInterface, err := getOSPFInterface()
 	if err != nil {
 		return fmt.Errorf("cannot get ospf interface summary: %s", err)
 	}
+	if err = processOSPFInterface(ch, jsonOSPFInterface); err != nil {
+		return err
+	}
+	return nil
+}
 
+type ospfIface struct {
+	NbrCount         int
+	NbrAdjacentCount int
+	Area             string
+}
+
+func getOSPFInterface() ([]byte, error) {
+	args := []string{"-c", "show ip ospf vrf all interface json"}
+	output, err := exec.Command(*frrVTYSHPath, args...).Output()
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
+}
+
+func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte) error {
 	// Unfortunately, the 'show ip ospf vrf all interface json' JSON  output is poorly structured. Instead
 	// of all interfaces being in a list, each interface is added as a key on the same level of vrfName and
 	// vrfId. As such, we have to loop through each key and apply logic to determine whether the key is an
 	// interface.
 	var jsonMap map[string]json.RawMessage
-	if err = json.Unmarshal(jsonOSPFInterface, &jsonMap); err != nil {
+	if err := json.Unmarshal(jsonOSPFInterface, &jsonMap); err != nil {
 		return fmt.Errorf("cannot unmarshal ospf interface json: %s", err)
 	}
 
@@ -86,19 +107,4 @@ func (c *OSPFCollector) scrape(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-type ospfIface struct {
-	NbrCount         int
-	NbrAdjacentCount int
-	Area             string
-}
-
-func getOSPFSummary() ([]byte, error) {
-	args := []string{"-c", "show ip ospf vrf all interface json"}
-	output, err := exec.Command(*frrVTYSHPath, args...).Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
 }
