@@ -27,19 +27,40 @@ var (
 	bgpPeerPrfAct    = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "prefixes_active"), "Number of active prefixes.", bgpPeerLabels, nil)
 	bgpPeerUp        = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_up"), "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels, nil)
 	bgpPeerUptimeSec = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_uptime_seconds"), "How long has the peer been up.", bgpPeerLabels, nil)
+
+	bgpErrors = []error{}
 )
 
-// BGPCollector collects BGP metrics
+// BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
 type BGPCollector struct {
-	Errors int
+	FRRVTYSHPath string
 }
 
-func (*BGPCollector) newCollector() Collector {
-	return &BGPCollector{}
+// type BGPTST struct {
+// }
+
+func (*BGPCLIHelper) NewCollector(path string, name string) *Collector {
+	return &Collector{
+		Name:          name,
+		PromCollector: NewBGPCollector(path),
+		Errors:        new(BGPErrorCollector),
+	}
 }
 
-// Describes the metrics.
-func (*BGPCollector) desc(ch chan<- *prometheus.Desc) {
+// BGPCLIHelper is used to populate flags.
+type BGPCLIHelper struct {
+}
+
+// BGPErrorCollector collects errors collecting BGP metrics.
+type BGPErrorCollector struct{}
+
+// NewBGPCollector returns a BGPCollector struct with the FRRVTYSHPath populated.
+func NewBGPCollector(path string) prometheus.Collector {
+	return &BGPCollector{FRRVTYSHPath: path}
+}
+
+// Describe implemented as per the prometheus.Collector interface.
+func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
 
 	ch <- bgpRibEntries
 	ch <- bgpRibMemUsgage
@@ -55,44 +76,43 @@ func (*BGPCollector) desc(ch chan<- *prometheus.Desc) {
 }
 
 // Name of the collector. Used to populate flag name.
-func (*BGPCollector) Name() string {
+func (*BGPCLIHelper) Name() string {
 	return bgpSubsystem
 }
 
 // Help describes the metrics this collector scrapes. Used to populate flag help.
-func (*BGPCollector) Help() string {
+func (*BGPCLIHelper) Help() string {
 	return "Collect BGP Metrics."
 }
 
 // EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
-func (*BGPCollector) EnabledByDefault() bool {
+func (*BGPCLIHelper) EnabledByDefault() bool {
 	return true
 }
 
-func (c *BGPCollector) scrape(ch chan<- prometheus.Metric) error {
-	var errors []string
+// Collect implemented as per the prometheus.Collector interface.
+func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
 
 	addressFamilies := []string{"ipv4", "ipv6"}
 	addressFamilyModifiers := []string{"unicast"}
 
 	for _, af := range addressFamilies {
 		for _, afMod := range addressFamilyModifiers {
-			jsonBGPSum, err := getBGPSummary(af, afMod)
+			jsonBGPSum, err := getBGPSummary(af, afMod, c.FRRVTYSHPath)
 			if err != nil {
-				errors = append(errors, fmt.Sprintf("cannot get bgp %s %s summary: %s", af, afMod, err))
+				bgpErrors = append(bgpErrors, fmt.Errorf("cannot get bgp %s %s summary: %s", af, afMod, err))
 			} else {
 				if err := processBGPSummary(ch, jsonBGPSum, af+afMod); err != nil {
-					errors = append(errors, fmt.Sprintf("%s", err))
+					bgpErrors = append(bgpErrors, fmt.Errorf("%s", err))
 				}
 			}
 		}
 	}
+}
 
-	if errors != nil {
-		return fmt.Errorf(strings.Join(errors, ","))
-	}
-
-	return nil
+// CollectErrors returns what errors have been gathered.
+func (*BGPErrorCollector) CollectErrors() []error {
+	return bgpErrors
 }
 
 type bgpProcess struct {
@@ -115,9 +135,9 @@ type bgpPeerSession struct {
 	PrefixReceivedCount int
 }
 
-func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
+func getBGPSummary(addressFamily string, addressFamilyModifier string, frrVTYSHPath string) ([]byte, error) {
 	args := []string{"-c", fmt.Sprintf("show ip bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
-	output, err := exec.Command(*frrVTYSHPath, args...).Output()
+	output, err := exec.Command(frrVTYSHPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}
