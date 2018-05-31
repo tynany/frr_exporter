@@ -28,35 +28,16 @@ var (
 	bgpPeerUp        = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_up"), "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels, nil)
 	bgpPeerUptimeSec = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_uptime_seconds"), "How long has the peer been up.", bgpPeerLabels, nil)
 
-	bgpErrors = []error{}
+	bgpErrors   = []error{}
+	totalErrors = 0.0
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
-type BGPCollector struct {
-	FRRVTYSHPath string
-}
-
-// type BGPTST struct {
-// }
-
-func (*BGPCLIHelper) NewCollector(path string, name string) *Collector {
-	return &Collector{
-		Name:          name,
-		PromCollector: NewBGPCollector(path),
-		Errors:        new(BGPErrorCollector),
-	}
-}
-
-// BGPCLIHelper is used to populate flags.
-type BGPCLIHelper struct {
-}
-
-// BGPErrorCollector collects errors collecting BGP metrics.
-type BGPErrorCollector struct{}
+type BGPCollector struct{}
 
 // NewBGPCollector returns a BGPCollector struct with the FRRVTYSHPath populated.
-func NewBGPCollector(path string) prometheus.Collector {
-	return &BGPCollector{FRRVTYSHPath: path}
+func NewBGPCollector() *BGPCollector {
+	return &BGPCollector{}
 }
 
 // Describe implemented as per the prometheus.Collector interface.
@@ -76,17 +57,17 @@ func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Name of the collector. Used to populate flag name.
-func (*BGPCLIHelper) Name() string {
+func (*BGPCollector) Name() string {
 	return bgpSubsystem
 }
 
 // Help describes the metrics this collector scrapes. Used to populate flag help.
-func (*BGPCLIHelper) Help() string {
+func (*BGPCollector) Help() string {
 	return "Collect BGP Metrics."
 }
 
 // EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
-func (*BGPCLIHelper) EnabledByDefault() bool {
+func (*BGPCollector) EnabledByDefault() bool {
 	return true
 }
 
@@ -98,11 +79,13 @@ func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for _, af := range addressFamilies {
 		for _, afMod := range addressFamilyModifiers {
-			jsonBGPSum, err := getBGPSummary(af, afMod, c.FRRVTYSHPath)
+			jsonBGPSum, err := getBGPSummary(af, afMod)
 			if err != nil {
+				totalErrors++
 				bgpErrors = append(bgpErrors, fmt.Errorf("cannot get bgp %s %s summary: %s", af, afMod, err))
 			} else {
 				if err := processBGPSummary(ch, jsonBGPSum, af+afMod); err != nil {
+					totalErrors++
 					bgpErrors = append(bgpErrors, fmt.Errorf("%s", err))
 				}
 			}
@@ -111,8 +94,12 @@ func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 // CollectErrors returns what errors have been gathered.
-func (*BGPErrorCollector) CollectErrors() []error {
+func (*BGPCollector) CollectErrors() []error {
 	return bgpErrors
+}
+
+func (*BGPCollector) CollectTotalErrors() float64 {
+	return totalErrors
 }
 
 type bgpProcess struct {
@@ -135,9 +122,9 @@ type bgpPeerSession struct {
 	PrefixReceivedCount int
 }
 
-func getBGPSummary(addressFamily string, addressFamilyModifier string, frrVTYSHPath string) ([]byte, error) {
+func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
 	args := []string{"-c", fmt.Sprintf("show ip bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
-	output, err := exec.Command(frrVTYSHPath, args...).Output()
+	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}

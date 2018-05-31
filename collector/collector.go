@@ -16,11 +16,13 @@ var (
 	frrTotalErrorCount  = 0
 
 	frrScrapesTotal   = prometheus.NewDesc(namespace+"_scrapes_total", "Total number of times FRR has been scraped.", nil, nil)
-	frrScrapeErrTotal = prometheus.NewDesc(namespace+"_scrape_errors_total", "Total number of errors from collector scrapes.", nil, nil)
+	frrScrapeErrTotal = prometheus.NewDesc(namespace+"_scrape_errors_total", "Total number of errors from a collector.", []string{"collector"}, nil)
 	frrScrapeDuration = prometheus.NewDesc(namespace+"_scrape_duration_seconds", "Time it took for a collector's scrape to complete.", []string{"collector"}, nil)
 	frrCollectorUp    = prometheus.NewDesc(namespace+"_collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", []string{"collector"}, nil)
 
 	frrUp = prometheus.NewDesc(namespace+"_up", "Whether FRR is currently up.", nil, nil)
+
+	vtyshPath string
 )
 
 // CLIHelper is used to populate flags.
@@ -33,13 +35,15 @@ type CLIHelper interface {
 
 	// Whether or not the collector is enabled by default.
 	EnabledByDefault() bool
-
-	NewCollector(string, string) *Collector
 }
 
 // CollectErrors is used to collect collector errors.
 type CollectErrors interface {
+	// Returns any errors that were encounted during Collect.
 	CollectErrors() []error
+
+	// Returns the total number of errors encounter during app run duration.
+	CollectTotalErrors() float64
 }
 
 // Exporters contains a slice of Collectors.
@@ -49,14 +53,21 @@ type Exporters struct {
 
 // Collector contains everything needed to collect from a collector.
 type Collector struct {
+	Enabled       *bool
 	Name          string
 	PromCollector prometheus.Collector
 	Errors        CollectErrors
+	CLIHelper     CLIHelper
 }
 
-// NewExporter creates a new exporter.
+// NewExporter returns an Exporters type containing a slice of Collectors.
 func NewExporter(collectors []*Collector) *Exporters {
 	return &Exporters{Collectors: collectors}
+}
+
+// SetVTYSHPath sets the path of vtysh.
+func (e *Exporters) SetVTYSHPath(path string) {
+	vtyshPath = path
 }
 
 // Describe implemented as per the prometheus.Collector interface.
@@ -113,8 +124,9 @@ func runCollector(ch chan<- prometheus.Metric, errCh chan<- int, collector *Coll
 
 	collector.PromCollector.Collect(ch)
 
-	errors := collector.Errors.CollectErrors()
+	ch <- prometheus.MustNewConstMetric(frrScrapeErrTotal, prometheus.GaugeValue, collector.Errors.CollectTotalErrors(), collector.Name)
 
+	errors := collector.Errors.CollectErrors()
 	if len(errors) > 0 {
 		errCh <- 1
 		ch <- prometheus.MustNewConstMetric(frrCollectorUp, prometheus.GaugeValue, 0, collector.Name)
