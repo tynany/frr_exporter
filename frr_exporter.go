@@ -29,6 +29,13 @@ func initCollectors() {
 		Errors:        bgp,
 		CLIHelper:     bgp,
 	})
+	ospf := collector.NewOSPFCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          ospf.Name(),
+		PromCollector: ospf,
+		Errors:        ospf,
+		CLIHelper:     ospf,
+	})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -39,9 +46,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			enabledCollectors = append(enabledCollectors, collector)
 		}
 	}
-	nc := collector.NewExporter(enabledCollectors)
-	nc.SetVTYSHPath(*frrVTYSHPath)
-	registry.Register(nc)
+	ne := collector.NewExporter(enabledCollectors)
+	ne.SetVTYSHPath(*frrVTYSHPath)
+	registry.Register(ne)
 
 	gatheres := prometheus.Gatherers{
 		prometheus.DefaultGatherer,
@@ -54,7 +61,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	promhttp.HandlerFor(gatheres, handlerOpts).ServeHTTP(w, r)
 }
 
-func parseFlags() {
+func parseCLI() {
 	for _, collector := range collectors {
 		collector.Enabled = kingpin.Flag(fmt.Sprintf("collector.%s", collector.CLIHelper.Name()), collector.CLIHelper.Help()).Default(strconv.FormatBool(collector.CLIHelper.EnabledByDefault())).Bool()
 	}
@@ -65,8 +72,12 @@ func parseFlags() {
 }
 
 func main() {
+	prometheus.MustRegister(version.NewCollector("frr_exporter"))
+
 	initCollectors()
-	parseFlags()
+	parseCLI()
+
+	log.Infof("Starting frr_exporter %s on %s", version.Info(), *listenAddress)
 
 	http.HandleFunc(*telemetryPath, handler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +90,6 @@ func main() {
 			</html>`))
 	})
 
-	log.Infoln("Starting frr_exporter on", *listenAddress)
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
 		log.Fatal(err)
 	}
