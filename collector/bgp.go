@@ -15,43 +15,31 @@ var (
 	bgpLabels     = []string{"vrf", "address_family"}
 	bgpPeerLabels = append(bgpLabels, "peer")
 
-	bgpRibEntries       = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "rib_entries"), "Number of routes in the RIB.", bgpLabels, nil)
-	bgpRibMemUsgage     = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "rib_memory_usage_bytes"), "Memory consumbed by the RIB.", bgpLabels, nil)
-	bgpPeerTotal        = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peers"), "Number peers configured.", bgpLabels, nil)
-	bgpPeerMemUsage     = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peers_memory_usage_bytes"), "Memory consumed by peers.", bgpLabels, nil)
-	bgpPeerGrps         = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_groups"), "Number of peer groups configured.", bgpLabels, nil)
-	bgpPeerGrpsMemUsage = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_groups_memory_bytes"), "Memory consumed by peer groups.", bgpLabels, nil)
+	bgpDesc = map[string]*prometheus.Desc{
+		"bgpRibEntries":       colPromDesc(bgpSubsystem, "rib_entries", "Number of routes in the RIB.", bgpLabels),
+		"bgpRibMemUsgage":     colPromDesc(bgpSubsystem, "rib_memory_usage_bytes", "Memory consumbed by the RIB.", bgpLabels),
+		"bgpPeerTotal":        colPromDesc(bgpSubsystem, "peers", "Number peers configured.", bgpLabels),
+		"bgpPeerMemUsage":     colPromDesc(bgpSubsystem, "peers_memory_usage_bytes", "Memory consumed by peers.", bgpLabels),
+		"bgpPeerGrps":         colPromDesc(bgpSubsystem, "peer_groups", "Number of peer groups configured.", bgpLabels),
+		"bgpPeerGrpsMemUsage": colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
 
-	bgpPeerMsgIn     = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "message_input_total"), "Number of received messages.", bgpPeerLabels, nil)
-	bgpPeerMsgOut    = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "message_output_total"), "Number of sent messages.", bgpPeerLabels, nil)
-	bgpPeerPrfAct    = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "prefixes_active"), "Number of active prefixes.", bgpPeerLabels, nil)
-	bgpPeerUp        = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_up"), "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels, nil)
-	bgpPeerUptimeSec = prometheus.NewDesc(prometheus.BuildFQName(namespace, bgpSubsystem, "peer_uptime_seconds"), "How long has the peer been up.", bgpPeerLabels, nil)
+		"bgpPeerMsgIn":     colPromDesc(bgpSubsystem, "message_input_total", "Number of received messages.", bgpPeerLabels),
+		"bgpPeerMsgOut":    colPromDesc(bgpSubsystem, "message_output_total", "Number of sent messages.", bgpPeerLabels),
+		"bgpPeerPrfAct":    colPromDesc(bgpSubsystem, "prefixes_active", "Number of active prefixes.", bgpPeerLabels),
+		"bgpPeerUp":        colPromDesc(bgpSubsystem, "peer_up", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
+		"bgpPeerUptimeSec": colPromDesc(bgpSubsystem, "peer_uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
+	}
+
+	bgpErrors      = []error{}
+	totalBGPErrors = 0.0
 )
 
-// BGPCollector collects BGP metrics
-type BGPCollector struct {
-	Errors int
-}
+// BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
+type BGPCollector struct{}
 
-func (*BGPCollector) newCollector() Collector {
+// NewBGPCollector returns a BGPCollector struct.
+func NewBGPCollector() *BGPCollector {
 	return &BGPCollector{}
-}
-
-// Describes the metrics.
-func (*BGPCollector) desc(ch chan<- *prometheus.Desc) {
-
-	ch <- bgpRibEntries
-	ch <- bgpRibMemUsgage
-	ch <- bgpPeerTotal
-	ch <- bgpPeerMemUsage
-	ch <- bgpPeerGrps
-	ch <- bgpPeerGrpsMemUsage
-	ch <- bgpPeerMsgIn
-	ch <- bgpPeerMsgOut
-	ch <- bgpPeerPrfAct
-	ch <- bgpPeerUp
-
 }
 
 // Name of the collector. Used to populate flag name.
@@ -69,8 +57,15 @@ func (*BGPCollector) EnabledByDefault() bool {
 	return true
 }
 
-func (c *BGPCollector) scrape(ch chan<- prometheus.Metric) error {
-	var errors []string
+// Describe implemented as per the prometheus.Collector interface.
+func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range bgpDesc {
+		ch <- desc
+	}
+}
+
+// Collect implemented as per the prometheus.Collector interface.
+func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
 
 	addressFamilies := []string{"ipv4", "ipv6"}
 	addressFamilyModifiers := []string{"unicast"}
@@ -79,45 +74,31 @@ func (c *BGPCollector) scrape(ch chan<- prometheus.Metric) error {
 		for _, afMod := range addressFamilyModifiers {
 			jsonBGPSum, err := getBGPSummary(af, afMod)
 			if err != nil {
-				errors = append(errors, fmt.Sprintf("cannot get bgp %s %s summary: %s", af, afMod, err))
+				totalBGPErrors++
+				bgpErrors = append(bgpErrors, fmt.Errorf("cannot get bgp %s %s summary: %s", af, afMod, err))
 			} else {
 				if err := processBGPSummary(ch, jsonBGPSum, af+afMod); err != nil {
-					errors = append(errors, fmt.Sprintf("%s", err))
+					totalBGPErrors++
+					bgpErrors = append(bgpErrors, fmt.Errorf("%s", err))
 				}
 			}
 		}
 	}
-
-	if errors != nil {
-		return fmt.Errorf(strings.Join(errors, ","))
-	}
-
-	return nil
 }
 
-type bgpProcess struct {
-	RouterID        string
-	AS              int
-	RIBCount        int
-	RIBMemory       int
-	PeerCount       int
-	PeerMemory      int
-	PeerGroupCount  int
-	PeerGroupMemory int
-	Peers           map[string]*bgpPeerSession
+// CollectErrors returns what errors have been gathered.
+func (*BGPCollector) CollectErrors() []error {
+	return bgpErrors
 }
 
-type bgpPeerSession struct {
-	State               string
-	MsgRcvd             int
-	MsgSent             int
-	PeerUptimeMsec      int64
-	PrefixReceivedCount int
+// CollectTotalErrors returns total errors.
+func (*BGPCollector) CollectTotalErrors() float64 {
+	return totalBGPErrors
 }
 
 func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
 	args := []string{"-c", fmt.Sprintf("show ip bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
-	output, err := exec.Command(*frrVTYSHPath, args...).Output()
+	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -133,32 +114,54 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 
 	for vrfName, vrfData := range jsonMap {
 		// The labels are "vrf", "address_family",
-		bgpProcLabels := []string{vrfName, addressFamily}
+		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily)}
 		// No point collecting metrics if no peers configured.
 		if vrfData.PeerCount != 0 {
-			ch <- prometheus.MustNewConstMetric(bgpRibEntries, prometheus.GaugeValue, float64(vrfData.RIBCount), bgpProcLabels...)
-			ch <- prometheus.MustNewConstMetric(bgpRibMemUsgage, prometheus.GaugeValue, float64(vrfData.RIBMemory), bgpProcLabels...)
-			ch <- prometheus.MustNewConstMetric(bgpPeerTotal, prometheus.GaugeValue, float64(vrfData.PeerCount), bgpProcLabels...)
-			ch <- prometheus.MustNewConstMetric(bgpPeerMemUsage, prometheus.GaugeValue, float64(vrfData.PeerMemory), bgpProcLabels...)
-			ch <- prometheus.MustNewConstMetric(bgpPeerGrps, prometheus.GaugeValue, float64(vrfData.PeerGroupCount), bgpProcLabels...)
-			ch <- prometheus.MustNewConstMetric(bgpPeerGrpsMemUsage, prometheus.GaugeValue, float64(vrfData.PeerGroupMemory), bgpProcLabels...)
+
+			newGauge(ch, bgpDesc["bgpRibEntries"], vrfData.RIBCount, bgpProcLabels...)
+			newGauge(ch, bgpDesc["bgpRibMemUsgage"], vrfData.RIBMemory, bgpProcLabels...)
+			newGauge(ch, bgpDesc["bgpPeerTotal"], vrfData.PeerCount, bgpProcLabels...)
+			newGauge(ch, bgpDesc["bgpPeerMemUsage"], vrfData.PeerMemory, bgpProcLabels...)
+			newGauge(ch, bgpDesc["bgpPeerGrps"], vrfData.PeerGroupCount, bgpProcLabels...)
+			newGauge(ch, bgpDesc["bgpPeerGrpsMemUsage"], vrfData.PeerGroupMemory, bgpProcLabels...)
 
 			for peerIP, peerData := range vrfData.Peers {
 				// The labels are "vrf", "address_family", "peer"
-				bgpPeerLabels := []string{vrfName, addressFamily, peerIP}
+				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), peerIP}
 
-				ch <- prometheus.MustNewConstMetric(bgpPeerMsgIn, prometheus.CounterValue, float64(peerData.MsgRcvd), bgpPeerLabels...)
-				ch <- prometheus.MustNewConstMetric(bgpPeerMsgOut, prometheus.CounterValue, float64(peerData.MsgSent), bgpPeerLabels...)
-				ch <- prometheus.MustNewConstMetric(bgpPeerPrfAct, prometheus.GaugeValue, float64(peerData.PrefixReceivedCount), bgpPeerLabels...)
-				ch <- prometheus.MustNewConstMetric(bgpPeerUptimeSec, prometheus.GaugeValue, float64(peerData.PeerUptimeMsec)*0.001, bgpPeerLabels...)
+				newCounter(ch, bgpDesc["bgpPeerMsgIn"], peerData.MsgRcvd, bgpPeerLabels...)
+				newCounter(ch, bgpDesc["bgpPeerMsgOut"], peerData.MsgSent, bgpPeerLabels...)
+				newGauge(ch, bgpDesc["bgpPeerPrfAct"], peerData.PrefixReceivedCount, bgpPeerLabels...)
+				newGauge(ch, bgpDesc["bgpPeerUptimeSec"], peerData.PeerUptimeMsec*0.001, bgpPeerLabels...)
 
 				peerState := 0.0
 				if strings.ToLower(peerData.State) == "established" {
 					peerState = 1
 				}
-				ch <- prometheus.MustNewConstMetric(bgpPeerUp, prometheus.GaugeValue, peerState, bgpPeerLabels...)
+
+				newGauge(ch, bgpDesc["bgpPeerUp"], peerState, bgpPeerLabels...)
 			}
 		}
 	}
 	return nil
+}
+
+type bgpProcess struct {
+	RouterID        string
+	AS              int
+	RIBCount        float64
+	RIBMemory       float64
+	PeerCount       float64
+	PeerMemory      float64
+	PeerGroupCount  float64
+	PeerGroupMemory float64
+	Peers           map[string]*bgpPeerSession
+}
+
+type bgpPeerSession struct {
+	State               string
+	MsgRcvd             float64
+	MsgSent             float64
+	PeerUptimeMsec      float64
+	PrefixReceivedCount float64
 }

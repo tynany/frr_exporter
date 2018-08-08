@@ -45,12 +45,9 @@ OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
 ### Building
 ```
 go get github.com/tynany/frr_exporter
-cd ${GOPATH}/src/github.com/prometheus/node_exporter
+cd ${GOPATH}/src/github.com/prometheus/frr_exporter
 go build
 ```
-
-### Adding Additional Collectors
-Adding a new collector can be achieved by implementing a new Collector interface and adding it to the collectors slice in the main package.
 
 ## TODO
  - Collector and main tests

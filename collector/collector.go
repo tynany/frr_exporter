@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 // The namespace used by all metrics.
@@ -15,101 +14,95 @@ const namespace = "frr"
 var (
 	frrTotalScrapeCount = 0.0
 	frrTotalErrorCount  = 0
-
-	frrScrapesTotal   = prometheus.NewDesc(namespace+"_scrapes_total", "Total number of times FRR has been scraped.", nil, nil)
-	frrScrapeErrTotal = prometheus.NewDesc(namespace+"_scrape_errors_total", "Total number of errors from collector scrapes.", nil, nil)
-	frrScrapeDuration = prometheus.NewDesc(namespace+"_scrape_duration_seconds", "Time it took for a collector's scrape to complete.", []string{"collector"}, nil)
-	frrCollectorUp    = prometheus.NewDesc(namespace+"_collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", []string{"collector"}, nil)
-
-	frrUp = prometheus.NewDesc(namespace+"_up", "Whether FRR is currently up.", nil, nil)
-
-	frrVTYSHPath = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
+	frrLabels           = []string{"collector"}
+	frrDesc             = map[string]*prometheus.Desc{
+		"frrScrapesTotal":   promDesc("scrapes_total", "Total number of times FRR has been scraped.", nil),
+		"frrScrapeErrTotal": promDesc("scrape_errors_total", "Total number of errors from a collector.", frrLabels),
+		"frrScrapeDuration": promDesc("scrape_duration_seconds", "Time it took for a collector's scrape to complete.", frrLabels),
+		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
+		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
+	}
+	vtyshPath string
 )
 
-// Collector is the interface used by each FRR collector.
-type Collector interface {
-	// Returns a new collector.
-	newCollector() Collector
-
-	// Describe metrics.
-	desc(ch chan<- *prometheus.Desc)
-
-	// Scrape metrics.
-	scrape(ch chan<- prometheus.Metric) error
-
-	// What the collector does. Used to populate flag help.
+// CLIHelper is used to populate flags.
+type CLIHelper interface {
+	// What the collector does.
 	Help() string
 
-	// Name of the collector. Used to populate the flag name.
+	// Name of the collector.
 	Name() string
 
-	// Whether or not the collector is enabled by default. Used to populate flag default.
+	// Whether or not the collector is enabled by default.
 	EnabledByDefault() bool
 }
 
-// Exporter contains a slice of Collector interfaces.
-type Exporter struct {
-	collectors []Collector
+// CollectErrors is used to collect collector errors.
+type CollectErrors interface {
+	// Returns any errors that were encounted during Collect.
+	CollectErrors() []error
+
+	// Returns the total number of errors encounter during app run duration.
+	CollectTotalErrors() float64
 }
 
-// NewExporter creates a new exporter.
-func NewExporter(collectorEnabledState *map[Collector]*bool) *Exporter {
-	collectors := collectorsToScrape(collectorEnabledState)
-	return &Exporter{collectors}
+// Exporters contains a slice of Collectors.
+type Exporters struct {
+	Collectors []*Collector
 }
 
-// Determine which collectors should be scraped.
-func collectorsToScrape(collectorEnabledState *map[Collector]*bool) []Collector {
-	collectors := []Collector{}
-	for collector, enabled := range *collectorEnabledState {
-		if *enabled {
-			collectors = append(collectors, collector.newCollector())
-		}
-	}
-	return collectors
+// Collector contains everything needed to collect from a collector.
+type Collector struct {
+	Enabled       *bool
+	Name          string
+	PromCollector prometheus.Collector
+	Errors        CollectErrors
+	CLIHelper     CLIHelper
+}
+
+// NewExporter returns an Exporters type containing a slice of Collectors.
+func NewExporter(collectors []*Collector) *Exporters {
+	return &Exporters{Collectors: collectors}
+}
+
+// SetVTYSHPath sets the path of vtysh.
+func (e *Exporters) SetVTYSHPath(path string) {
+	vtyshPath = path
 }
 
 // Describe implemented as per the prometheus.Collector interface.
-func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- frrScrapesTotal
-	ch <- frrScrapeErrTotal
-	ch <- frrUp
-	ch <- frrScrapeDuration
-	ch <- frrCollectorUp
-
-	for _, collector := range e.collectors {
-		collector.desc(ch)
+func (e *Exporters) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range bgpDesc {
+		ch <- desc
+	}
+	for _, collector := range e.Collectors {
+		collector.PromCollector.Describe(ch)
 	}
 }
 
 // Collect implemented as per the prometheus.Collector interface.
-func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
+func (e *Exporters) Collect(ch chan<- prometheus.Metric) {
 	frrTotalScrapeCount++
-	ch <- prometheus.MustNewConstMetric(frrScrapesTotal, prometheus.CounterValue, frrTotalScrapeCount)
+	ch <- prometheus.MustNewConstMetric(frrDesc["frrScrapesTotal"], prometheus.CounterValue, frrTotalScrapeCount)
 
 	errCh := make(chan int, 1024)
 	wg := &sync.WaitGroup{}
-
-	for _, collector := range e.collectors {
+	for _, collector := range e.Collectors {
 		wg.Add(1)
-		go runCollector(ch, collector, wg, errCh)
+		go runCollector(ch, errCh, collector, wg)
 	}
-
 	wg.Wait()
+
 	close(errCh)
-
 	errCount := processErrors(errCh)
-
-	frrTotalErrorCount = frrTotalErrorCount + errCount
-	ch <- prometheus.MustNewConstMetric(frrScrapeErrTotal, prometheus.CounterValue, float64(frrTotalErrorCount))
 
 	// If at least one collector is successfull we can assume FRR is running, otherwise assume FRR is not running. This is
 	// cheaper than executing an FRR command and is a good enough method to determine whether FRR is up.
 	frrState := 0.0
-	if errCount < len(e.collectors) {
+	if errCount < len(e.Collectors) {
 		frrState = 1
 	}
-	ch <- prometheus.MustNewConstMetric(frrUp, prometheus.GaugeValue, frrState)
+	ch <- prometheus.MustNewConstMetric(frrDesc["frrUp"], prometheus.GaugeValue, frrState)
 }
 
 func processErrors(errCh chan int) int {
@@ -123,16 +116,39 @@ func processErrors(errCh chan int) int {
 	}
 }
 
-func runCollector(ch chan<- prometheus.Metric, collector Collector, wg *sync.WaitGroup, errCh chan<- int) {
+func runCollector(ch chan<- prometheus.Metric, errCh chan<- int, collector *Collector, wg *sync.WaitGroup) {
 	defer wg.Done()
-	collectorState := 1.0
 	startTime := time.Now()
 
-	if err := collector.scrape(ch); err != nil {
-		collectorState = 0
+	collector.PromCollector.Collect(ch)
+
+	ch <- prometheus.MustNewConstMetric(frrDesc["frrScrapeErrTotal"], prometheus.GaugeValue, collector.Errors.CollectTotalErrors(), collector.Name)
+
+	errors := collector.Errors.CollectErrors()
+	if len(errors) > 0 {
 		errCh <- 1
-		log.Errorf("collector \"%s\" scrape failed: %s", collector.Name(), err)
+		ch <- prometheus.MustNewConstMetric(frrDesc["frrCollectorUp"], prometheus.GaugeValue, 0, collector.Name)
+		for _, err := range errors {
+			log.Errorf("collector \"%s\" scrape failed: %s", collector.Name, err)
+		}
+	} else {
+		ch <- prometheus.MustNewConstMetric(frrDesc["frrCollectorUp"], prometheus.GaugeValue, 1, collector.Name)
 	}
-	ch <- prometheus.MustNewConstMetric(frrCollectorUp, prometheus.GaugeValue, collectorState, collector.Name())
-	ch <- prometheus.MustNewConstMetric(frrScrapeDuration, prometheus.GaugeValue, float64(time.Since(startTime).Seconds()), collector.Name())
+	ch <- prometheus.MustNewConstMetric(frrDesc["frrScrapeDuration"], prometheus.GaugeValue, float64(time.Since(startTime).Seconds()), collector.Name)
+}
+
+func promDesc(metricName string, metricDescription string, labels []string) *prometheus.Desc {
+	return prometheus.NewDesc(namespace+"_"+metricName, metricDescription, labels, nil)
+}
+
+func colPromDesc(subsystem string, metricName string, metricDescription string, labels []string) *prometheus.Desc {
+	return prometheus.NewDesc(prometheus.BuildFQName(namespace, subsystem, metricName), metricDescription, labels, nil)
+}
+
+func newGauge(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
+	ch <- prometheus.MustNewConstMetric(descName, prometheus.GaugeValue, metric, labels...)
+}
+
+func newCounter(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
+	ch <- prometheus.MustNewConstMetric(descName, prometheus.CounterValue, metric, labels...)
 }

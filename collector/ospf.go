@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -12,24 +13,20 @@ var (
 	ospfSubsystem = "ospf"
 
 	ospfIfaceLabels = []string{"vrf", "iface", "area"}
-
-	ospfIfaceNeigh    = prometheus.NewDesc(prometheus.BuildFQName(namespace, ospfSubsystem, "neighbors"), "Number of neighbors deteceted.", ospfIfaceLabels, nil)
-	ospfIfaceNeighAdj = prometheus.NewDesc(prometheus.BuildFQName(namespace, ospfSubsystem, "neighbor_adjacencies"), "Number of neighbor adjacencies formed.", ospfIfaceLabels, nil)
+	ospfDesc        = map[string]*prometheus.Desc{
+		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors deteceted.", ospfIfaceLabels),
+		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", ospfIfaceLabels),
+	}
+	ospfErrors      = []error{}
+	totalOSPFErrors = 0.0
 )
 
-// OSPFCollector collects OSPF metrics from "vtysh -c 'show ip ospf vrf all interface json'"
-type OSPFCollector struct {
-	Errors int
-}
+// OSPFCollector collects OSPF metrics, implemented as per prometheus.Collector interface.
+type OSPFCollector struct{}
 
-func (*OSPFCollector) newCollector() Collector {
+// NewOSPFCollector returns a OSPFCollector struct.
+func NewOSPFCollector() *OSPFCollector {
 	return &OSPFCollector{}
-}
-
-// Describes the metrics.
-func (*OSPFCollector) desc(ch chan<- *prometheus.Desc) {
-	ch <- ospfIfaceNeigh
-	ch <- ospfIfaceNeighAdj
 }
 
 // Name of the collector. Used to populate flag name.
@@ -47,26 +44,40 @@ func (*OSPFCollector) EnabledByDefault() bool {
 	return true
 }
 
-func (c *OSPFCollector) scrape(ch chan<- prometheus.Metric) error {
-	jsonOSPFInterface, err := getOSPFInterface()
-	if err != nil {
-		return fmt.Errorf("cannot get ospf interface summary: %s", err)
+// Describe implemented as per the prometheus.Collector interface.
+func (*OSPFCollector) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range ospfDesc {
+		ch <- desc
 	}
-	if err = processOSPFInterface(ch, jsonOSPFInterface); err != nil {
-		return err
-	}
-	return nil
 }
 
-type ospfIface struct {
-	NbrCount         int
-	NbrAdjacentCount int
-	Area             string
+// Collect implemented as per the prometheus.Collector interface.
+func (c *OSPFCollector) Collect(ch chan<- prometheus.Metric) {
+	jsonOSPFInterface, err := getOSPFInterface()
+	if err != nil {
+		totalOSPFErrors++
+		ospfErrors = append(ospfErrors, fmt.Errorf("cannot get ospf interface summary: %s", err))
+	} else {
+		if err = processOSPFInterface(ch, jsonOSPFInterface); err != nil {
+			totalOSPFErrors++
+			ospfErrors = append(ospfErrors, fmt.Errorf("%s", err))
+		}
+	}
+}
+
+// CollectErrors returns what errors have been gathered.
+func (*OSPFCollector) CollectErrors() []error {
+	return ospfErrors
+}
+
+// CollectTotalErrors returns total errors.
+func (*OSPFCollector) CollectTotalErrors() float64 {
+	return totalOSPFErrors
 }
 
 func getOSPFInterface() ([]byte, error) {
 	args := []string{"-c", "show ip ospf vrf all interface json"}
-	output, err := exec.Command(*frrVTYSHPath, args...).Output()
+	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -100,11 +111,17 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 					return fmt.Errorf("cannot unmarshal interface json: %s", err)
 				}
 				// The labels are "vrf", "iface", "area"
-				labels := []string{vrfName, ospfInstanceKey, iface.Area}
-				ch <- prometheus.MustNewConstMetric(ospfIfaceNeigh, prometheus.GaugeValue, float64(iface.NbrCount), labels...)
-				ch <- prometheus.MustNewConstMetric(ospfIfaceNeighAdj, prometheus.GaugeValue, float64(iface.NbrAdjacentCount), labels...)
+				labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
+				newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
+				newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
 			}
 		}
 	}
 	return nil
+}
+
+type ospfIface struct {
+	NbrCount         float64
+	NbrAdjacentCount float64
+	Area             string
 }

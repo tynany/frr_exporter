@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,19 +16,39 @@ import (
 var (
 	listenAddress = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
 	telemetryPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+	frrVTYSHPath  = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
 
-	collectorEnabledState = map[collector.Collector]*bool{}
-
-	collectors = []collector.Collector{
-		new(collector.BGPCollector),
-		new(collector.OSPFCollector),
-	}
+	collectors = []*collector.Collector{}
 )
+
+func initCollectors() {
+	bgp := collector.NewBGPCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          bgp.Name(),
+		PromCollector: bgp,
+		Errors:        bgp,
+		CLIHelper:     bgp,
+	})
+	ospf := collector.NewOSPFCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          ospf.Name(),
+		PromCollector: ospf,
+		Errors:        ospf,
+		CLIHelper:     ospf,
+	})
+}
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	registry := prometheus.NewRegistry()
-	nc := collector.NewExporter(&collectorEnabledState)
-	registry.Register(nc)
+	enabledCollectors := []*collector.Collector{}
+	for _, collector := range collectors {
+		if *collector.Enabled {
+			enabledCollectors = append(enabledCollectors, collector)
+		}
+	}
+	ne := collector.NewExporter(enabledCollectors)
+	ne.SetVTYSHPath(*frrVTYSHPath)
+	registry.Register(ne)
 
 	gatheres := prometheus.Gatherers{
 		prometheus.DefaultGatherer,
@@ -40,14 +61,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	promhttp.HandlerFor(gatheres, handlerOpts).ServeHTTP(w, r)
 }
 
-func parseFlags() {
+func parseCLI() {
 	for _, collector := range collectors {
-		enabledByDefault := "false"
-		if collector.EnabledByDefault() {
-			enabledByDefault = "true"
-		}
-		collectorEnabledFlag := kingpin.Flag(fmt.Sprintf("collector.%s", collector.Name()), collector.Help()).Default(enabledByDefault).Bool()
-		collectorEnabledState[collector] = collectorEnabledFlag
+		collector.Enabled = kingpin.Flag(fmt.Sprintf("collector.%s", collector.CLIHelper.Name()), collector.CLIHelper.Help()).Default(strconv.FormatBool(collector.CLIHelper.EnabledByDefault())).Bool()
 	}
 	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("frr_exporter"))
@@ -56,7 +72,12 @@ func parseFlags() {
 }
 
 func main() {
-	parseFlags()
+	prometheus.MustRegister(version.NewCollector("frr_exporter"))
+
+	initCollectors()
+	parseCLI()
+
+	log.Infof("Starting frr_exporter %s on %s", version.Info(), *listenAddress)
 
 	http.HandleFunc(*telemetryPath, handler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +90,6 @@ func main() {
 			</html>`))
 	})
 
-	log.Infoln("Starting frr_exporter on", *listenAddress)
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
 		log.Fatal(err)
 	}
