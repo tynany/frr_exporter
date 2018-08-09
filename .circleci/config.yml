@@ -1,6 +1,7 @@
 version: 2
 jobs:
   release:
+    working_directory: /go/src/github.com/tynany/frr_exporter
     docker:
       - image: circleci/golang:1.10
     steps:
