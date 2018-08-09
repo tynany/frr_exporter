@@ -36,6 +36,13 @@ func initCollectors() {
 		Errors:        ospf,
 		CLIHelper:     ospf,
 	})
+	bgp6 := collector.NewBGP6Collector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          bgp6.Name(),
+		PromCollector: bgp6,
+		Errors:        bgp6,
+		CLIHelper:     bgp6,
+	})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,26 @@ http://device:9342/metrics
 To view available flags:
 ```
 ./frr_exporter -h
+usage: frr_exporter [<flags>]
+
+Flags:
+  -h, --help              Show context-sensitive help (also try --help-long and
+                          --help-man).
+      --web.listen-address=":9342"
+                          Address on which to expose metrics and web interface.
+      --web.telemetry-path="/metrics"
+                          Path under which to expose metrics.
+      --frr.vtysh.path="/usr/bin/vtysh"
+                          Path of vtysh.
+      --collector.bgp     Collect BGP Metrics.
+      --collector.ospf    Collect OSPF Metrics.
+      --log.level="info"  Only log messages with the given severity or above. Valid
+                          levels: [debug, info, warn, error, fatal]
+      --log.format="logger:stderr"
+                          Set the log target and format. Example:
+                          "logger:syslog?appname=bob&local=7" or
+                          "logger:stdout?json=true"
+      --version           Show application version.
 ```
 
 Promethues configuraiton:

@@ -30,8 +30,10 @@ var (
 		"bgpPeerUptimeSec": colPromDesc(bgpSubsystem, "peer_uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
 	}
 
-	bgpErrors      = []error{}
-	totalBGPErrors = 0.0
+	bgpErrors       = []error{}
+	totalBGPErrors  = 0.0
+	bgp6Errors      = []error{}
+	totalBGP6Errors = 0.0
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
@@ -66,24 +68,7 @@ func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
-
-	addressFamilies := []string{"ipv4", "ipv6"}
-	addressFamilyModifiers := []string{"unicast"}
-
-	for _, af := range addressFamilies {
-		for _, afMod := range addressFamilyModifiers {
-			jsonBGPSum, err := getBGPSummary(af, afMod)
-			if err != nil {
-				totalBGPErrors++
-				bgpErrors = append(bgpErrors, fmt.Errorf("cannot get bgp %s %s summary: %s", af, afMod, err))
-			} else {
-				if err := processBGPSummary(ch, jsonBGPSum, af+afMod); err != nil {
-					totalBGPErrors++
-					bgpErrors = append(bgpErrors, fmt.Errorf("%s", err))
-				}
-			}
-		}
-	}
+	collectBGP(ch, "ipv4")
 }
 
 // CollectErrors returns what errors have been gathered.
@@ -94,6 +79,83 @@ func (*BGPCollector) CollectErrors() []error {
 // CollectTotalErrors returns total errors.
 func (*BGPCollector) CollectTotalErrors() float64 {
 	return totalBGPErrors
+}
+
+// BGP6Collector collects BGP metrics, implemented as per prometheus.Collector interface.
+type BGP6Collector struct{}
+
+// NewBGP6Collector returns a BGP6Collector struct.
+func NewBGP6Collector() *BGP6Collector {
+	return &BGP6Collector{}
+}
+
+// Name of the collector. Used to populate flag name.
+func (*BGP6Collector) Name() string {
+	return bgpSubsystem + "6"
+}
+
+// Help describes the metrics this collector scrapes. Used to populate flag help.
+func (*BGP6Collector) Help() string {
+	return "Collect BGP IPv6 Metrics."
+}
+
+// EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
+func (*BGP6Collector) EnabledByDefault() bool {
+	return true
+}
+
+// Describe implemented as per the prometheus.Collector interface.
+func (*BGP6Collector) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range bgpDesc {
+		ch <- desc
+	}
+}
+
+// Collect implemented as per the prometheus.Collector interface.
+func (c *BGP6Collector) Collect(ch chan<- prometheus.Metric) {
+	collectBGP(ch, "ipv6")
+}
+
+// CollectErrors returns what errors have been gathered.
+func (*BGP6Collector) CollectErrors() []error {
+	return bgp6Errors
+}
+
+// CollectTotalErrors returns total errors.
+func (*BGP6Collector) CollectTotalErrors() float64 {
+	return totalBGP6Errors
+}
+
+func collectBGP(ch chan<- prometheus.Metric, addressFamily string) {
+	errors := []error{}
+	totalErrors := 0.0
+
+	afMod := "unicast"
+
+	jsonBGPSum, err := getBGPSummary(addressFamily, afMod)
+	if err != nil {
+		totalErrors++
+		errors = append(errors, fmt.Errorf("cannot get bgp %s %s summary: %s", addressFamily, afMod, err))
+	} else {
+		if err := processBGPSummary(ch, jsonBGPSum, addressFamily+afMod); err != nil {
+			totalErrors++
+			errors = append(errors, fmt.Errorf("%s", err))
+		}
+	}
+
+	if totalErrors > 0 {
+		if addressFamily == "ipv4" {
+			totalBGPErrors = totalBGPErrors + totalErrors
+		} else if addressFamily == "ipv6" {
+			totalBGP6Errors = totalBGP6Errors + totalErrors
+		}
+	}
+
+	if addressFamily == "ipv4" {
+		bgpErrors = errors
+	} else if addressFamily == "ipv6" {
+		bgp6Errors = errors
+	}
 }
 
 func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
