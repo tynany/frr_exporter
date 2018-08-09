@@ -1,5 +1,5 @@
----
-  jobs:
+version: 2
+jobs:
   release:
     docker:
       - image: circleci/golang:1.10
