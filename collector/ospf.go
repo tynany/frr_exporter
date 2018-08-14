@@ -36,7 +36,7 @@ func (*OSPFCollector) Name() string {
 
 // Help describes the metrics this collector scrapes. Used to populate flag help.
 func (*OSPFCollector) Help() string {
-	return "Collect OSPF Metrics."
+	return "Collect OSPF Metrics"
 }
 
 // EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.

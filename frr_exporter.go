@@ -70,7 +70,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func parseCLI() {
 	for _, collector := range collectors {
-		collector.Enabled = kingpin.Flag(fmt.Sprintf("collector.%s", collector.CLIHelper.Name()), collector.CLIHelper.Help()).Default(strconv.FormatBool(collector.CLIHelper.EnabledByDefault())).Bool()
+		defaultState := "disabled"
+		enabledByDefault := collector.CLIHelper.EnabledByDefault()
+		if enabledByDefault == true {
+			defaultState = "enabled"
+		}
+		collector.Enabled = kingpin.Flag(fmt.Sprintf("collector.%s", collector.CLIHelper.Name()), fmt.Sprintf("%s (default: %s).", collector.CLIHelper.Help(), defaultState)).Default(strconv.FormatBool(enabledByDefault)).Bool()
 	}
 	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("frr_exporter"))
