@@ -72,7 +72,7 @@ func (e *Exporters) SetVTYSHPath(path string) {
 
 // Describe implemented as per the prometheus.Collector interface.
 func (e *Exporters) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range bgpDesc {
+	for _, desc := range frrDesc {
 		ch <- desc
 	}
 	for _, collector := range e.Collectors {
