@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -14,8 +15,8 @@ import (
 var (
 	bgpSubsystem = "bgp"
 
-	bgpLabels         = []string{"vrf", "address_family"}
-	bgpPeerLabels     = append(bgpLabels, "peer")
+	bgpLabels         = []string{"vrf", "address_family", "local_as"}
+	bgpPeerLabels     = append(bgpLabels, "peer", "peer_as")
 	bgpPeerTypeLabels = []string{"type", "address_family"}
 
 	bgpDesc = map[string]*prometheus.Desc{
@@ -192,8 +193,9 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 	peerTypes := make(map[string]float64)
 
 	for vrfName, vrfData := range jsonMap {
-		// The labels are "vrf", "address_family",
-		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily)}
+		// The labels are "vrf", "address_family", "local_as"
+		localAs := strconv.FormatInt(vrfData.AS, 10)
+		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), localAs}
 		// No point collecting metrics if no peers configured.
 		if vrfData.PeerCount != 0 {
 
@@ -205,8 +207,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 			newGauge(ch, bgpDesc["peerGrpsMemUsage"], vrfData.PeerGroupMemory, bgpProcLabels...)
 
 			for peerIP, peerData := range vrfData.Peers {
-				// The labels are "vrf", "address_family", "peer"
-				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), peerIP}
+				// The labels are "vrf", "address_family", "local_as", "peer", "remote_as"
+				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
 
 				newCounter(ch, bgpDesc["peerMsgIn"], peerData.MsgRcvd, bgpPeerLabels...)
 				newCounter(ch, bgpDesc["peerMsgOut"], peerData.MsgSent, bgpPeerLabels...)
@@ -248,7 +250,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 
 type bgpProcess struct {
 	RouterID        string
-	AS              int
+	AS              int64
 	RIBCount        float64
 	RIBMemory       float64
 	PeerCount       float64
@@ -260,6 +262,7 @@ type bgpProcess struct {
 
 type bgpPeerSession struct {
 	State               string
+	RemoteAs            int64
 	MsgRcvd             float64
 	MsgSent             float64
 	PeerUptimeMsec      float64
