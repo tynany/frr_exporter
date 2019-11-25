@@ -16,9 +16,9 @@ var (
 	bgpSubsystem        = "bgp"
 	bgpPeerMetricPrefix = "bgp_peer"
 
-	bgpLabels         = []string{"vrf", "address_family", "local_as"}
+	bgpLabels         = []string{"vrf", "afi", "safi", "local_as"}
 	bgpPeerLabels     = append(bgpLabels, "peer", "peer_as")
-	bgpPeerTypeLabels = []string{"type", "address_family"}
+	bgpPeerTypeLabels = []string{"type", "afi", "safi"}
 
 	bgpDesc = map[string]*prometheus.Desc{
 		"ribCount":        colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
@@ -134,40 +134,42 @@ func (*BGP6Collector) CollectTotalErrors() float64 {
 	return totalBGP6Errors
 }
 
-func collectBGP(ch chan<- prometheus.Metric, addressFamily string) {
+func collectBGP(ch chan<- prometheus.Metric, AFI string) {
+	SAFI := ""
 	errors := []error{}
 	totalErrors := 0.0
 
-	afMod := "unicast"
+	if (AFI == "ipv4") || (AFI == "ipv6") {
+		SAFI = "unicast"
 
-	jsonBGPSum, err := getBGPSummary(addressFamily, afMod)
+
+	jsonBGPSum, err := getBGPSummary(AFI, SAFI)
 	if err != nil {
 		totalErrors++
-		errors = append(errors, fmt.Errorf("cannot get bgp %s %s summary: %s", addressFamily, afMod, err))
+		errors = append(errors, fmt.Errorf("cannot get bgp %s %s summary: %s", AFI, SAFI, err))
 	} else {
-		if err := processBGPSummary(ch, jsonBGPSum, addressFamily+afMod); err != nil {
+		if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI); err != nil {
 			totalErrors++
 			errors = append(errors, fmt.Errorf("%s", err))
 		}
 	}
 
-	if totalErrors > 0 {
-		if addressFamily == "ipv4" {
-			totalBGPErrors = totalBGPErrors + totalErrors
-		} else if addressFamily == "ipv6" {
-			totalBGP6Errors = totalBGP6Errors + totalErrors
+	if AFI == "ipv4" {
+		bgpErrors = errors
+		if totalErrors > 0 {
+			totalBGPErrors += totalErrors
+		}
+	} else if AFI == "ipv6" {
+		bgp6Errors = errors
+		if totalErrors > 0 {
+			totalBGP6Errors += totalErrors
 		}
 	}
 
-	if addressFamily == "ipv4" {
-		bgpErrors = errors
-	} else if addressFamily == "ipv6" {
-		bgp6Errors = errors
-	}
 }
 
-func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
-	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
+func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
+	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
 	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
@@ -175,7 +177,7 @@ func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, 
 	return output, nil
 }
 
-func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFamily string) error {
+func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string) error {
 	var jsonMap map[string]bgpProcess
 
 	if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
@@ -194,9 +196,9 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 	peerTypes := make(map[string]float64)
 
 	for vrfName, vrfData := range jsonMap {
-		// The labels are "vrf", "address_family", "local_as"
+		// The labels are "vrf", "afi",  "safi", "local_as"
 		localAs := strconv.FormatInt(vrfData.AS, 10)
-		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), localAs}
+		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs}
 		// No point collecting metrics if no peers configured.
 		if vrfData.PeerCount != 0 {
 
@@ -208,8 +210,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 			newGauge(ch, bgpDesc["peerGroupMemory"], vrfData.PeerGroupMemory, bgpProcLabels...)
 
 			for peerIP, peerData := range vrfData.Peers {
-				// The labels are "vrf", "address_family", "local_as", "peer", "remote_as"
-				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(addressFamily), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
+				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
+				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
 
 				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, bgpPeerLabels...)
 				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, bgpPeerLabels...)
@@ -243,7 +245,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, addressFa
 	}
 
 	for peerType, count := range peerTypes {
-		peerTypeLabels := []string{peerType, strings.ToLower(addressFamily)}
+		peerTypeLabels := []string{peerType, strings.ToLower(AFI), strings.ToLower(SAFI)}
 		newGauge(ch, bgpDesc["peerTypesUp"], count, peerTypeLabels...)
 	}
 	return nil
