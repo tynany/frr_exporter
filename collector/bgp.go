@@ -166,7 +166,7 @@ func collectBGP(ch chan<- prometheus.Metric, addressFamily string) {
 }
 
 func getBGPSummary(addressFamily string, addressFamilyModifier string) ([]byte, error) {
-	args := []string{"-c", fmt.Sprintf("show ip bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
+	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", addressFamily, addressFamilyModifier)}
 	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
