@@ -43,6 +43,13 @@ func initCollectors() {
 		Errors:        bgp6,
 		CLIHelper:     bgp6,
 	})
+	bgpl2vpn := collector.NewBGPL2VPNCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          bgpl2vpn.Name(),
+		PromCollector: bgpl2vpn,
+		Errors:        bgpl2vpn,
+		CLIHelper:     bgpl2vpn,
+	})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

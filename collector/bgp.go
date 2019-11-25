@@ -36,10 +36,12 @@ var (
 		"peerTypesUp":         colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
 	}
 
-	bgpErrors       = []error{}
-	totalBGPErrors  = 0.0
-	bgp6Errors      = []error{}
-	totalBGP6Errors = 0.0
+	bgpErrors           = []error{}
+	totalBGPErrors      = 0.0
+	bgp6Errors          = []error{}
+	totalBGP6Errors     = 0.0
+	bgpL2VPNErrors      = []error{}
+	totalBGPL2VPNErrors = 0.0
 
 	bgpPeerTypes = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
 )
@@ -134,6 +136,51 @@ func (*BGP6Collector) CollectTotalErrors() float64 {
 	return totalBGP6Errors
 }
 
+// BGPL2VPNCollector collects BGP metrics, implemented as per prometheus.Collector interface.
+type BGPL2VPNCollector struct{}
+
+// NewBGPL2VPNCollector returns a BGPL2VPNCollector struct.
+func NewBGPL2VPNCollector() *BGPL2VPNCollector {
+	return &BGPL2VPNCollector{}
+}
+
+// Name of the collector. Used to populate flag name.
+func (*BGPL2VPNCollector) Name() string {
+	return bgpSubsystem + "l2vpn"
+}
+
+// Help describes the metrics this collector scrapes. Used to populate flag help.
+func (*BGPL2VPNCollector) Help() string {
+	return "Collect BGP L2VPN Metrics"
+}
+
+// EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
+func (*BGPL2VPNCollector) EnabledByDefault() bool {
+	return false
+}
+
+// Describe implemented as per the prometheus.Collector interface.
+func (*BGPL2VPNCollector) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range bgpDesc {
+		ch <- desc
+	}
+}
+
+// Collect implemented as per the prometheus.Collector interface.
+func (c *BGPL2VPNCollector) Collect(ch chan<- prometheus.Metric) {
+	collectBGP(ch, "l2vpn")
+}
+
+// CollectErrors returns what errors have been gathered.
+func (*BGPL2VPNCollector) CollectErrors() []error {
+	return bgpL2VPNErrors
+}
+
+// CollectTotalErrors returns total errors.
+func (*BGPL2VPNCollector) CollectTotalErrors() float64 {
+	return totalBGPL2VPNErrors
+}
+
 func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 	SAFI := ""
 	errors := []error{}
@@ -142,6 +189,9 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 	if (AFI == "ipv4") || (AFI == "ipv6") {
 		SAFI = "unicast"
 
+	} else if AFI == "l2vpn" {
+		SAFI = "evpn"
+	}
 
 	jsonBGPSum, err := getBGPSummary(AFI, SAFI)
 	if err != nil {
@@ -163,6 +213,11 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 		bgp6Errors = errors
 		if totalErrors > 0 {
 			totalBGP6Errors += totalErrors
+		}
+	} else if AFI == "l2vpn" {
+		bgpL2VPNErrors = errors
+		if totalErrors > 0 {
+			totalBGPL2VPNErrors += totalErrors
 		}
 	}
 

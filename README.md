@@ -18,23 +18,26 @@ To view available flags:
 usage: frr_exporter [<flags>]
 
 Flags:
-  -h, --help              Show context-sensitive help (also try --help-long and --help-man).
+  -h, --help                Show context-sensitive help (also try --help-long and --help-man).
       --collector.bgp.peer-types
-                          Enable scraping of BGP peer types from peer descriptions (default: disabled).
+                            Enable scraping of BGP peer types from peer descriptions (default:
+                            disabled).
       --web.listen-address=":9342"
-                          Address on which to expose metrics and web interface.
+                            Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
-                          Path under which to expose metrics.
+                            Path under which to expose metrics.
       --frr.vtysh.path="/usr/bin/vtysh"
-                          Path of vtysh.
-      --collector.bgp     Collect BGP Metrics (default: enabled).
-      --collector.ospf    Collect OSPF Metrics (default: enabled).
-      --collector.bgp6    Collect BGP IPv6 Metrics (default: enabled).
-      --log.level="info"  Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
+                            Path of vtysh.
+      --collector.bgp       Collect BGP Metrics (default: enabled).
+      --collector.ospf      Collect OSPF Metrics (default: enabled).
+      --collector.bgp6      Collect BGP IPv6 Metrics (default: enabled).
+      --collector.bgpl2vpn  Collect BGP L2VPN Metrics (default: disabled).
+      --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug,
+                            info, warn, error, fatal]
       --log.format="logger:stderr"
-                          Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or
-                          "logger:stdout?json=true"
-      --version           Show application version.
+                            Set the log target and format. Example: "logger:syslog?appname=bob&local=7"
+                            or "logger:stdout?json=true"
+      --version             Show application version.
 ```
 
 Promethues configuraiton:
@@ -52,13 +55,15 @@ scrape_configs:
 ```
 
 ## Collectors
-To disable a default collector, use the `--no-collector.$name` flag.
+To disable a default collector, use the `--no-collector.$name` flag, or
+`--collector.$name` to enable it.
 
 ### Enabled by Default
 Name | Description
 --- | ---
 BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
+BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
 
 ### BGP: frr_bgp_peer_types_up
@@ -79,6 +84,6 @@ go build
 ## TODO
  - Collector and main tests
  - OSPF6
- - isis
- - Additional BGP address families
+ - ISIS
+ - Additional BGP SAFI
  - Feel free to submit a new feature request
