@@ -111,7 +111,7 @@ func (*BGP6Collector) Help() string {
 
 // EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
 func (*BGP6Collector) EnabledByDefault() bool {
-	return true
+	return false
 }
 
 // Describe implemented as per the prometheus.Collector interface.
