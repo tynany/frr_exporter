@@ -30,7 +30,7 @@ Flags:
                             Path of vtysh.
       --collector.bgp       Collect BGP Metrics (default: enabled).
       --collector.ospf      Collect OSPF Metrics (default: enabled).
-      --collector.bgp6      Collect BGP IPv6 Metrics (default: enabled).
+      --collector.bgp6      Collect BGP IPv6 Metrics (default: disabled).
       --collector.bgpl2vpn  Collect BGP L2VPN Metrics (default: disabled).
       --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug,
                             info, warn, error, fatal]
@@ -62,16 +62,20 @@ To disable a default collector, use the `--no-collector.$name` flag, or
 Name | Description
 --- | ---
 BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
+OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
+
+### Disabled by Default
+Name | Description
+--- | ---
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
-OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
 
 ### BGP: frr_bgp_peer_types_up
 FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that can report on the number of types of BGP peers that are currently established, such as for Alert Manager. To implement this metric, a JSON formatted description with a 'type' element must be configured on your BGP group. FRR Exporter will then aggregate all BGP peers that are currently established and configured with that type.
 
 For example, if you want to know how many BGP peers are currently established that provide internet, you'd set the description of all BGP groups that provide internet to `{"type":"internet"}` and query Prometheus with `frr_bgp_peer_types_up{type="internet"})`. Going further, if you want to create an alert when the number of established BGP peers that provide internet is 1 or less, you'd use `sum(frr_bgp_peer_types_up{type="internet"}) <= 1`.
 
-To enable `frr_bgp_peer_types_up`, use the `--collector.bgp.peer-types` flag. 
+To enable `frr_bgp_peer_types_up`, use the `--collector.bgp.peer-types` flag.
 
 ## Development
 ### Building
