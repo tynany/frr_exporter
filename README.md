@@ -20,8 +20,9 @@ usage: frr_exporter [<flags>]
 Flags:
   -h, --help                Show context-sensitive help (also try --help-long and --help-man).
       --collector.bgp.peer-types
-                            Enable scraping of BGP peer types from peer descriptions (default:
-                            disabled).
+                            Enable scraping of BGP peer types from peer descriptions (default: disabled).
+      --collector.bgp.peer-descriptions
+                            Add the BGP peer description as a label to peer metrics (default: disabled).
       --web.listen-address=":9342"
                             Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
@@ -32,11 +33,9 @@ Flags:
       --collector.ospf      Collect OSPF Metrics (default: enabled).
       --collector.bgp6      Collect BGP IPv6 Metrics (default: disabled).
       --collector.bgpl2vpn  Collect BGP L2VPN Metrics (default: disabled).
-      --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug,
-                            info, warn, error, fatal]
+      --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
       --log.format="logger:stderr"
-                            Set the log target and format. Example: "logger:syslog?appname=bob&local=7"
-                            or "logger:stdout?json=true"
+                            Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"
       --version             Show application version.
 ```
 
@@ -70,8 +69,19 @@ Name | Description
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 
+### BGP: Peer Description Labels
+The description of a BGP peer can be added as a label to all peer metrics by passing the `--collector.bgp.peer-descriptions` flag. The peer description must be JSON formatted with a `desc` field. Example configuration:
+
+```
+router bgp 64512
+ neighbor 192.168.0.1 remote-as 64513
+ neighbor 192.168.0.1 description {"desc":"important peer"}
+```
+
+Note, it recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
+
 ### BGP: frr_bgp_peer_types_up
-FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that can report on the number of types of BGP peers that are currently established, such as for Alert Manager. To implement this metric, a JSON formatted description with a 'type' element must be configured on your BGP group. FRR Exporter will then aggregate all BGP peers that are currently established and configured with that type.
+FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that can report on the number of types of BGP peers that are currently established, such as for Alert Manager. To implement this metric, a JSON formatted description with a 'type' field must be configured on your BGP group. FRR Exporter will then aggregate all BGP peers that are currently established and configured with that type.
 
 For example, if you want to know how many BGP peers are currently established that provide internet, you'd set the description of all BGP groups that provide internet to `{"type":"internet"}` and query Prometheus with `frr_bgp_peer_types_up{type="internet"})`. Going further, if you want to create an alert when the number of established BGP peers that provide internet is 1 or less, you'd use `sum(frr_bgp_peer_types_up{type="internet"}) <= 1`.
 

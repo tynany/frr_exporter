@@ -16,25 +16,7 @@ var (
 	bgpSubsystem        = "bgp"
 	bgpPeerMetricPrefix = "bgp_peer"
 
-	bgpLabels         = []string{"vrf", "afi", "safi", "local_as"}
-	bgpPeerLabels     = append(bgpLabels, "peer", "peer_as")
-	bgpPeerTypeLabels = []string{"type", "afi", "safi"}
-
-	bgpDesc = map[string]*prometheus.Desc{
-		"ribCount":        colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
-		"ribMemory":       colPromDesc(bgpSubsystem, "rib_memory_bytes", "Memory consumbed by the RIB.", bgpLabels),
-		"peerCount":       colPromDesc(bgpSubsystem, "peers_count_total", "Number peers configured.", bgpLabels),
-		"peerMemory":      colPromDesc(bgpSubsystem, "peers_memory_bytes", "Memory consumed by peers.", bgpLabels),
-		"peerGroupCount":  colPromDesc(bgpSubsystem, "peer_groups_count_total", "Number of peer groups configured.", bgpLabels),
-		"peerGroupMemory": colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
-
-		"msgRcvd":             colPromDesc(bgpPeerMetricPrefix, "message_received_total", "Number of received messages.", bgpPeerLabels),
-		"msgSent":             colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
-		"prefixReceivedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number active prefixes received.", bgpPeerLabels),
-		"state":               colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
-		"UptimeSec":           colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
-		"peerTypesUp":         colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
-	}
+	bgpDesc = map[string]*prometheus.Desc{}
 
 	bgpErrors           = []error{}
 	totalBGPErrors      = 0.0
@@ -44,6 +26,7 @@ var (
 	totalBGPL2VPNErrors = 0.0
 
 	bgpPeerTypes = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
+	bgpPeerDescs = kingpin.Flag("collector.bgp.peer-descriptions", "Add the BGP peer description as a label to peer metrics (default: disabled).").Default("False").Bool()
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
@@ -71,6 +54,9 @@ func (*BGPCollector) EnabledByDefault() bool {
 
 // Describe implemented as per the prometheus.Collector interface.
 func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
+	if len(bgpDesc) == 0 {
+		setDesc()
+	}
 	for _, desc := range bgpDesc {
 		ch <- desc
 	}
@@ -116,6 +102,9 @@ func (*BGP6Collector) EnabledByDefault() bool {
 
 // Describe implemented as per the prometheus.Collector interface.
 func (*BGP6Collector) Describe(ch chan<- *prometheus.Desc) {
+	if len(bgpDesc) == 0 {
+		setDesc()
+	}
 	for _, desc := range bgpDesc {
 		ch <- desc
 	}
@@ -161,6 +150,9 @@ func (*BGPL2VPNCollector) EnabledByDefault() bool {
 
 // Describe implemented as per the prometheus.Collector interface.
 func (*BGPL2VPNCollector) Describe(ch chan<- *prometheus.Desc) {
+	if len(bgpDesc) == 0 {
+		setDesc()
+	}
 	for _, desc := range bgpDesc {
 		ch <- desc
 	}
@@ -179,6 +171,32 @@ func (*BGPL2VPNCollector) CollectErrors() []error {
 // CollectTotalErrors returns total errors.
 func (*BGPL2VPNCollector) CollectTotalErrors() float64 {
 	return totalBGPL2VPNErrors
+}
+
+func setDesc() {
+	bgpLabels := []string{"vrf", "afi", "safi", "local_as"}
+	bgpPeerTypeLabels := []string{"type", "afi", "safi"}
+	bgpPeerLabels := append(bgpLabels, "peer", "peer_as")
+
+	if *bgpPeerDescs {
+		bgpPeerLabels = append(bgpLabels, "peer", "peer_as", "peer_desc")
+	}
+
+	bgpDesc = map[string]*prometheus.Desc{
+		"ribCount":        colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
+		"ribMemory":       colPromDesc(bgpSubsystem, "rib_memory_bytes", "Memory consumbed by the RIB.", bgpLabels),
+		"peerCount":       colPromDesc(bgpSubsystem, "peers_count_total", "Number peers configured.", bgpLabels),
+		"peerMemory":      colPromDesc(bgpSubsystem, "peers_memory_bytes", "Memory consumed by peers.", bgpLabels),
+		"peerGroupCount":  colPromDesc(bgpSubsystem, "peer_groups_count_total", "Number of peer groups configured.", bgpLabels),
+		"peerGroupMemory": colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
+
+		"msgRcvd":             colPromDesc(bgpPeerMetricPrefix, "message_received_total", "Number of received messages.", bgpPeerLabels),
+		"msgSent":             colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
+		"prefixReceivedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number active prefixes received.", bgpPeerLabels),
+		"state":               colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
+		"UptimeSec":           colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
+		"peerTypesUp":         colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
+	}
 }
 
 func collectBGP(ch chan<- prometheus.Metric, AFI string) {
@@ -239,10 +257,10 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		return fmt.Errorf("cannot unmarshal bgp summary json: %s", err)
 	}
 
-	var bgpPeerDesc map[string]string
+	var peerDesc map[string]bgpPeerDesc
 	var err error
-	if *bgpPeerTypes == true {
-		bgpPeerDesc, err = getBGPPeerDesc()
+	if *bgpPeerTypes || *bgpPeerDescs {
+		peerDesc, err = getBGPPeerDesc()
 		if err != nil {
 			return err
 		}
@@ -253,48 +271,50 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	for vrfName, vrfData := range jsonMap {
 		// The labels are "vrf", "afi",  "safi", "local_as"
 		localAs := strconv.FormatInt(vrfData.AS, 10)
-		bgpProcLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs}
+		procLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs}
 		// No point collecting metrics if no peers configured.
 		if vrfData.PeerCount != 0 {
 
-			newGauge(ch, bgpDesc["ribCount"], vrfData.RIBCount, bgpProcLabels...)
-			newGauge(ch, bgpDesc["ribMemory"], vrfData.RIBMemory, bgpProcLabels...)
-			newGauge(ch, bgpDesc["peerCount"], vrfData.PeerCount, bgpProcLabels...)
-			newGauge(ch, bgpDesc["peerMemory"], vrfData.PeerMemory, bgpProcLabels...)
-			newGauge(ch, bgpDesc["peerGroupCount"], vrfData.PeerGroupCount, bgpProcLabels...)
-			newGauge(ch, bgpDesc["peerGroupMemory"], vrfData.PeerGroupMemory, bgpProcLabels...)
+			newGauge(ch, bgpDesc["ribCount"], vrfData.RIBCount, procLabels...)
+			newGauge(ch, bgpDesc["ribMemory"], vrfData.RIBMemory, procLabels...)
+			newGauge(ch, bgpDesc["peerCount"], vrfData.PeerCount, procLabels...)
+			newGauge(ch, bgpDesc["peerMemory"], vrfData.PeerMemory, procLabels...)
+			newGauge(ch, bgpDesc["peerGroupCount"], vrfData.PeerGroupCount, procLabels...)
+			newGauge(ch, bgpDesc["peerGroupMemory"], vrfData.PeerGroupMemory, procLabels...)
 
 			for peerIP, peerData := range vrfData.Peers {
 				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
-				bgpPeerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
+				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
 
-				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, bgpPeerLabels...)
-				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, bgpPeerLabels...)
-				newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PrefixReceivedCount, bgpPeerLabels...)
-				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, bgpPeerLabels...)
+				if *bgpPeerDescs {
+					d := ""
+					if desc, exists := peerDesc[peerIP]; exists {
+						// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
+						d = desc.Desc
+					}
+					peerLabels = append(peerLabels, d)
+				}
+				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
+				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, peerLabels...)
+				newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PrefixReceivedCount, peerLabels...)
+				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
 
 				peerState := 0.0
 				if strings.ToLower(peerData.State) == "established" {
 					peerState = 1
-					if *bgpPeerTypes == true {
-						if desc, exists := bgpPeerDesc[peerIP]; exists {
-							var peerType bgpPeerType
-							if err := json.Unmarshal([]byte(desc), &peerType); err != nil {
-								goto NoPeerType
-							}
-
-							if peerType.Type != "" {
-								if _, exists := peerTypes[strings.TrimSpace(peerType.Type)]; exists {
-									peerTypes[strings.TrimSpace(peerType.Type)]++
+					if *bgpPeerTypes {
+						if desc, exists := peerDesc[peerIP]; exists {
+							if desc.Type != "" {
+								if _, exists := peerTypes[strings.TrimSpace(desc.Type)]; exists {
+									peerTypes[strings.TrimSpace(desc.Type)]++
 								} else {
-									peerTypes[strings.TrimSpace(peerType.Type)] = 1
+									peerTypes[strings.TrimSpace(desc.Type)] = 1
 								}
 							}
 						}
 					}
 				}
-			NoPeerType:
-				newGauge(ch, bgpDesc["state"], peerState, bgpPeerLabels...)
+				newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
 			}
 		}
 	}
@@ -327,21 +347,27 @@ type bgpPeerSession struct {
 	PrefixReceivedCount float64
 }
 
-func getBGPPeerDesc() (map[string]string, error) {
+func getBGPPeerDesc() (map[string]bgpPeerDesc, error) {
 	args := []string{"-c", "show run bgpd"}
-	desc := make(map[string]string)
+	desc := make(map[string]bgpPeerDesc)
 	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}
 	r := regexp.MustCompile(`.*neighbor (.*) description (.*)\n`)
 	matches := r.FindAllStringSubmatch(string(output), -1)
-	for i := range matches {
-		desc[matches[i][1]] = matches[i][2]
+	for _, match := range matches {
+		var peerDesc bgpPeerDesc
+		if err := json.Unmarshal([]byte(match[2]), &peerDesc); err != nil {
+			// Don't return an error if scraping fails as description unmarshalling is best effort.
+			bgpErrors = append(bgpErrors, fmt.Errorf("cannot unmarshall bgp description %s for peer %s : %s", match[2], match[1], err))
+		}
+		desc[match[1]] = peerDesc
 	}
 	return desc, nil
 }
 
-type bgpPeerType struct {
+type bgpPeerDesc struct {
 	Type string `json:"type"`
+	Desc string `json:"desc"`
 }
