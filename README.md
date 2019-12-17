@@ -22,7 +22,10 @@ Flags:
       --collector.bgp.peer-types
                             Enable scraping of BGP peer types from peer descriptions (default: disabled).
       --collector.bgp.peer-descriptions
-                            Add the BGP peer description as a label to peer metrics (default: disabled).
+                            Add the BGP peer description as a label to peer metrics. (default: disabled).
+      --collector.bgp.peer-descriptions.plain-text
+                            Use the full text field of the BGP peer description, instead of a JSON formatted
+                            description (default: disabled).
       --web.listen-address=":9342"
                             Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
@@ -33,9 +36,11 @@ Flags:
       --collector.ospf      Collect OSPF Metrics (default: enabled).
       --collector.bgp6      Collect BGP IPv6 Metrics (default: disabled).
       --collector.bgpl2vpn  Collect BGP L2VPN Metrics (default: disabled).
-      --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
+      --log.level="info"    Only log messages with the given severity or above. Valid levels: [debug, info, warn,
+                            error, fatal]
       --log.format="logger:stderr"
-                            Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"
+                            Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or
+                            "logger:stdout?json=true"
       --version             Show application version.
 ```
 
