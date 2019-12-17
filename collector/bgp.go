@@ -25,8 +25,9 @@ var (
 	bgpL2VPNErrors      = []error{}
 	totalBGPL2VPNErrors = 0.0
 
-	bgpPeerTypes = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
-	bgpPeerDescs = kingpin.Flag("collector.bgp.peer-descriptions", "Add the BGP peer description as a label to peer metrics (default: disabled).").Default("False").Bool()
+	bgpPeerTypes     = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
+	bgpPeerDescs     = kingpin.Flag("collector.bgp.peer-descriptions", "Add the BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
+	bgpPeerDescsText = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description, instead of a JSON formatted description (default: disabled).").Default("False").Bool()
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
@@ -257,10 +258,11 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		return fmt.Errorf("cannot unmarshal bgp summary json: %s", err)
 	}
 
-	var peerDesc map[string]bgpPeerDesc
+	var peerDescJSON map[string]bgpPeerDesc
+	var peerDescText map[string]string
 	var err error
 	if *bgpPeerTypes || *bgpPeerDescs {
-		peerDesc, err = getBGPPeerDesc()
+		peerDescJSON, peerDescText, err = getBGPPeerDesc()
 		if err != nil {
 			return err
 		}
@@ -288,10 +290,16 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 
 				if *bgpPeerDescs {
 					d := ""
-					if desc, exists := peerDesc[peerIP]; exists {
-						// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
-						d = desc.Desc
+					if *bgpPeerDescsText {
+						if desc, exists := peerDescText[peerIP]; exists {
+							d = desc
+						}
+					} else {
+						if desc, exists := peerDescJSON[peerIP]; exists {
+							d = desc.Desc
+						}
 					}
+					// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
 					peerLabels = append(peerLabels, d)
 				}
 				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
@@ -303,7 +311,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				if strings.ToLower(peerData.State) == "established" {
 					peerState = 1
 					if *bgpPeerTypes {
-						if desc, exists := peerDesc[peerIP]; exists {
+						if desc, exists := peerDescJSON[peerIP]; exists {
 							if desc.Type != "" {
 								if _, exists := peerTypes[strings.TrimSpace(desc.Type)]; exists {
 									peerTypes[strings.TrimSpace(desc.Type)]++
@@ -347,12 +355,17 @@ type bgpPeerSession struct {
 	PrefixReceivedCount float64
 }
 
-func getBGPPeerDesc() (map[string]bgpPeerDesc, error) {
+// Returns:
+//  - JSON formatted description of peers
+//  - Plain text description of peers
+//  - Error
+func getBGPPeerDesc() (map[string]bgpPeerDesc, map[string]string, error) {
 	args := []string{"-c", "show run bgpd"}
-	desc := make(map[string]bgpPeerDesc)
+	descJSON := make(map[string]bgpPeerDesc)
+	descText := make(map[string]string)
 	output, err := exec.Command(vtyshPath, args...).Output()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	r := regexp.MustCompile(`.*neighbor (.*) description (.*)\n`)
 	matches := r.FindAllStringSubmatch(string(output), -1)
@@ -362,9 +375,10 @@ func getBGPPeerDesc() (map[string]bgpPeerDesc, error) {
 			// Don't return an error if scraping fails as description unmarshalling is best effort.
 			bgpErrors = append(bgpErrors, fmt.Errorf("cannot unmarshall bgp description %s for peer %s : %s", match[2], match[1], err))
 		}
-		desc[match[1]] = peerDesc
+		descJSON[match[1]] = peerDesc
+		descText[match[1]] = match[2]
 	}
-	return desc, nil
+	return descJSON, descText, nil
 }
 
 type bgpPeerDesc struct {

@@ -78,6 +78,14 @@ router bgp 64512
  neighbor 192.168.0.1 description {"desc":"important peer"}
 ```
 
+If an unstructured description is preferred, pass the `--collector.bgp.peer-descriptions.plain-text` flag. Example configuration:
+
+```
+router bgp 64512
+ neighbor 192.168.0.1 remote-as 64513
+ neighbor 192.168.0.1 description important peer
+```
+
 Note, it recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
 
 ### BGP: frr_bgp_peer_types_up
