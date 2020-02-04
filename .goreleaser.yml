@@ -13,13 +13,13 @@ builds:
       - 5
       - 6
       - 7
-archive:
-  wrap_in_directory: true
-  replacements:
-    386: i386
-    amd64: x86_64
-  files:
-    - none*
+archives:
+  - wrap_in_directory: true
+    replacements:
+      386: i386
+      amd64: x86_64
+    files:
+      - none*
 checksum:
   name_template: 'checksums.txt'
 snapshot:
