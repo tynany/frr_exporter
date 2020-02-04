@@ -104,6 +104,21 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 			switch ospfInstanceKey {
 			case "vrfName", "vrfId":
 				// Do nothing as we do not need the value of these keys.
+			case "interfaces":
+				var _tempInterfaceInstance map[string]json.RawMessage
+				if err := json.Unmarshal(ospfInstanceVal, &_tempInterfaceInstance); err != nil {
+					return fmt.Errorf("cannot unmarshal VRF instance json: %s", err)
+				}
+				for interfaceKey, interfaceValue := range _tempInterfaceInstance {
+					var newIface ospfIface
+					if err := json.Unmarshal(interfaceValue, &newIface); err != nil {
+						return fmt.Errorf("cannot unmarshal interface json: %s", err)
+					}
+					// The labels are "vrf", "newIface", "area"
+					labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
+					newGauge(ch, ospfDesc["ospfIfaceNeigh"], newIface.NbrCount, labels...)
+					newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], newIface.NbrAdjacentCount, labels...)
+				}
 			default:
 				// All other keys are interfaces.
 				var iface ospfIface
