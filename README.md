@@ -65,7 +65,7 @@ To disable a default collector, use the `--no-collector.$name` flag, or
 ### Enabled by Default
 Name | Description
 --- | ---
-BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
+BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer received prefixes<br> - Peer advertised prefixes<br> - Peer state (established/down)<br> - Peer uptime
 OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
 
 ### Disabled by Default
