@@ -191,12 +191,13 @@ func setDesc() {
 		"peerGroupCount":  colPromDesc(bgpSubsystem, "peer_groups_count_total", "Number of peer groups configured.", bgpLabels),
 		"peerGroupMemory": colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
 
-		"msgRcvd":             colPromDesc(bgpPeerMetricPrefix, "message_received_total", "Number of received messages.", bgpPeerLabels),
-		"msgSent":             colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
-		"prefixReceivedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number active prefixes received.", bgpPeerLabels),
-		"state":               colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
-		"UptimeSec":           colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
-		"peerTypesUp":         colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
+		"msgRcvd":               colPromDesc(bgpPeerMetricPrefix, "message_received_total", "Number of received messages.", bgpPeerLabels),
+		"msgSent":               colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
+		"prefixReceivedCount":   colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number active prefixes received.", bgpPeerLabels),
+		"prefixAdvertisedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_advertised_count_total", "Number prefixes advertised.", bgpPeerLabels),
+		"state":                 colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
+		"UptimeSec":             colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
+		"peerTypesUp":           colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
 	}
 }
 
@@ -323,6 +324,12 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					}
 				}
 				newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
+
+				advertisedPrefixes, err := getPeerAdvertisedPrefixes(AFI, SAFI, vrfName, peerIP)
+				if err != nil {
+					return err
+				}
+				newGauge(ch, bgpDesc["prefixAdvertisedCount"], advertisedPrefixes, peerLabels...)
 			}
 		}
 	}
@@ -332,6 +339,25 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		newGauge(ch, bgpDesc["peerTypesUp"], count, peerTypeLabels...)
 	}
 	return nil
+}
+
+func getPeerAdvertisedPrefixes(AFI string, SAFI string, vrfName string, neighbor string) (float64, error) {
+	args := []string{}
+	if strings.ToLower(vrfName) == "default" {
+		args = []string{"-c", fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)}
+	} else {
+		args = []string{"-c", fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)}
+	}
+	output, err := exec.Command(vtyshPath, args...).Output()
+	if err != nil {
+		return 0, err
+	}
+
+	var advertisedPrefixes bgpAdvertisedRoutes
+	if err := json.Unmarshal(output, &advertisedPrefixes); err != nil {
+		return 0, fmt.Errorf("cannot unmarshal bgp neighbor %s advertised-routes json: %s", neighbor, err)
+	}
+	return advertisedPrefixes.TotalPrefixCounter, nil
 }
 
 type bgpProcess struct {
@@ -353,6 +379,9 @@ type bgpPeerSession struct {
 	MsgSent             float64
 	PeerUptimeMsec      float64
 	PrefixReceivedCount float64
+}
+type bgpAdvertisedRoutes struct {
+	TotalPrefixCounter float64 `json:"totalPrefixCounter"`
 }
 
 // Returns:
