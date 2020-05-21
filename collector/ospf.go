@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -77,7 +78,10 @@ func (*OSPFCollector) CollectTotalErrors() float64 {
 
 func getOSPFInterface() ([]byte, error) {
 	args := []string{"-c", "show ip ospf vrf all interface json"}
-	output, err := exec.Command(vtyshPath, args...).Output()
+	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
+	defer cancel()
+
+	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}

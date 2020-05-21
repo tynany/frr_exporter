@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -14,9 +15,10 @@ import (
 )
 
 var (
-	listenAddress = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
-	telemetryPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-	frrVTYSHPath  = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
+	listenAddress   = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
+	telemetryPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+	frrVTYSHPath    = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
+	frrVTYSHTimeout = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commends (default 20s).").Default("20s").String()
 
 	collectors = []*collector.Collector{}
 )
@@ -62,6 +64,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	ne := collector.NewExporter(enabledCollectors)
 	ne.SetVTYSHPath(*frrVTYSHPath)
+
+	// error checking is done as part of parseCLI
+	frrTimeout, _ := time.ParseDuration(*frrVTYSHTimeout)
+	ne.SetVTYSHTimeout(frrTimeout)
+
 	registry.Register(ne)
 
 	gatheres := prometheus.Gatherers{
@@ -88,6 +95,9 @@ func parseCLI() {
 	kingpin.Version(version.Print("frr_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	if _, err := time.ParseDuration(*frrVTYSHTimeout); err != nil {
+		log.Fatalf("invalid frr.vtysh.timeout flag %q: %s", *frrVTYSHTimeout, err)
+	}
 }
 
 func main() {

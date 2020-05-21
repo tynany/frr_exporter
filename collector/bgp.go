@@ -1,12 +1,14 @@
 package collector
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -25,9 +27,10 @@ var (
 	bgpL2VPNErrors      = []error{}
 	totalBGPL2VPNErrors = 0.0
 
-	bgpPeerTypes     = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
-	bgpPeerDescs     = kingpin.Flag("collector.bgp.peer-descriptions", "Add the BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
-	bgpPeerDescsText = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description, instead of a JSON formatted description (default: disabled).").Default("False").Bool()
+	bgpPeerTypes          = kingpin.Flag("collector.bgp.peer-types", "Enable scraping of BGP peer types from peer descriptions (default: disabled).").Default("False").Bool()
+	bgpPeerDescs          = kingpin.Flag("collector.bgp.peer-descriptions", "Add the BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
+	bgpPeerDescsText      = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description, instead of a JSON formatted description (default: disabled).").Default("False").Bool()
+	bgpAdvertisedPrefixes = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer (default: disabled).").Default("False").Bool()
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
@@ -220,7 +223,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 	} else {
 		if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI); err != nil {
 			totalErrors++
-			errors = append(errors, fmt.Errorf("%s", err))
+			errors = append(errors, err)
 		}
 	}
 
@@ -245,7 +248,11 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 
 func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
 	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
-	output, err := exec.Command(vtyshPath, args...).Output()
+
+	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
+	defer cancel()
+
+	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +277,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	}
 
 	peerTypes := make(map[string]float64)
-
+	wgAdvertisedPrefixes := &sync.WaitGroup{}
 	for vrfName, vrfData := range jsonMap {
 		// The labels are "vrf", "afi",  "safi", "local_as"
 		localAs := strconv.FormatInt(vrfData.AS, 10)
@@ -288,6 +295,11 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 			for peerIP, peerData := range vrfData.Peers {
 				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
 				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
+
+				if *bgpAdvertisedPrefixes {
+					wgAdvertisedPrefixes.Add(1)
+					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, peerLabels...)
+				}
 
 				if *bgpPeerDescs {
 					d := ""
@@ -325,14 +337,11 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				}
 				newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
 
-				advertisedPrefixes, err := getPeerAdvertisedPrefixes(AFI, SAFI, vrfName, peerIP)
-				if err != nil {
-					return err
-				}
-				newGauge(ch, bgpDesc["prefixAdvertisedCount"], advertisedPrefixes, peerLabels...)
 			}
 		}
 	}
+
+	wgAdvertisedPrefixes.Wait()
 
 	for peerType, count := range peerTypes {
 		peerTypeLabels := []string{peerType, strings.ToLower(AFI), strings.ToLower(SAFI)}
@@ -341,23 +350,55 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	return nil
 }
 
-func getPeerAdvertisedPrefixes(AFI string, SAFI string, vrfName string, neighbor string) (float64, error) {
+func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, peerLabels ...string) {
+	defer wg.Done()
+
+	errors := []error{}
+	totalErrors := 0.0
+
 	args := []string{}
 	if strings.ToLower(vrfName) == "default" {
 		args = []string{"-c", fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)}
 	} else {
 		args = []string{"-c", fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)}
 	}
-	output, err := exec.Command(vtyshPath, args...).Output()
+
+	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
+	defer cancel()
+
+	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
 	if err != nil {
-		return 0, err
+		totalErrors++
+		errors = append(errors, err)
 	}
 
 	var advertisedPrefixes bgpAdvertisedRoutes
 	if err := json.Unmarshal(output, &advertisedPrefixes); err != nil {
-		return 0, fmt.Errorf("cannot unmarshal bgp neighbor %s advertised-routes json: %s", neighbor, err)
+		totalErrors++
+		errors = append(errors, err)
 	}
-	return advertisedPrefixes.TotalPrefixCounter, nil
+
+	if AFI == "ipv4" {
+		bgpErrors = append(bgpErrors, errors...)
+		if totalErrors > 0 {
+			totalBGPErrors += totalErrors
+			return
+		}
+	} else if AFI == "ipv6" {
+		bgp6Errors = append(bgpErrors, errors...)
+		if totalErrors > 0 {
+			totalBGP6Errors += totalErrors
+			return
+		}
+	} else if AFI == "l2vpn" {
+		bgpL2VPNErrors = append(bgpErrors, errors...)
+		if totalErrors > 0 {
+			totalBGPL2VPNErrors += totalErrors
+			return
+		}
+	}
+	newGauge(ch, bgpDesc["prefixAdvertisedCount"], advertisedPrefixes.TotalPrefixCounter, peerLabels...)
+
 }
 
 type bgpProcess struct {
@@ -392,7 +433,11 @@ func getBGPPeerDesc() (map[string]bgpPeerDesc, map[string]string, error) {
 	args := []string{"-c", "show run bgpd"}
 	descJSON := make(map[string]bgpPeerDesc)
 	descText := make(map[string]string)
-	output, err := exec.Command(vtyshPath, args...).Output()
+
+	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
+	defer cancel()
+
+	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
 	if err != nil {
 		return nil, nil, err
 	}

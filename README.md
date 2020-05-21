@@ -26,12 +26,17 @@ Flags:
       --collector.bgp.peer-descriptions.plain-text
                             Use the full text field of the BGP peer description, instead of a JSON formatted
                             description (default: disabled).
+      --collector.bgp.advertised-prefixes
+                            Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports
+                            the number of advertised prefixes to a BGP peer (default: disabled).
       --web.listen-address=":9342"
                             Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
                             Path under which to expose metrics.
       --frr.vtysh.path="/usr/bin/vtysh"
                             Path of vtysh.
+      --frr.vtysh.timeout="20s"  
+                            The timeout when running vtysh commends (default 20s).
       --collector.bgp       Collect BGP Metrics (default: enabled).
       --collector.ospf      Collect OSPF Metrics (default: enabled).
       --collector.bgp6      Collect BGP IPv6 Metrics (default: disabled).
@@ -74,6 +79,9 @@ Name | Description
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 
+### VTYSH
+The vtysh command is heavily utilised to extract metrics from FRR. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
+
 ### BGP: Peer Description Labels
 The description of a BGP peer can be added as a label to all peer metrics by passing the `--collector.bgp.peer-descriptions` flag. The peer description must be JSON formatted with a `desc` field. Example configuration:
 
@@ -92,6 +100,9 @@ router bgp 64512
 ```
 
 Note, it recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
+
+### BGP: Advertied Prexies to a Peer
+The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial.
 
 ### BGP: frr_bgp_peer_types_up
 FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that can report on the number of types of BGP peers that are currently established, such as for Alert Manager. To implement this metric, a JSON formatted description with a 'type' field must be configured on your BGP group. FRR Exporter will then aggregate all BGP peers that are currently established and configured with that type.
