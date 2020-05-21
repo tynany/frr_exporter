@@ -99,10 +99,10 @@ router bgp 64512
  neighbor 192.168.0.1 description important peer
 ```
 
-Note, it recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
+Note, it is recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
 
-### BGP: Advertied Prexies to a Peer
-The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial.
+### BGP: Advertised Prexies to a Peer
+The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json'` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial.
 
 ### BGP: frr_bgp_peer_types_up
 FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that can report on the number of types of BGP peers that are currently established, such as for Alert Manager. To implement this metric, a JSON formatted description with a 'type' field must be configured on your BGP group. FRR Exporter will then aggregate all BGP peers that are currently established and configured with that type.
