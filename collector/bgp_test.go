@@ -204,87 +204,111 @@ var (
 }
 }
 `)
+
+	evpnVniJson = []byte(`
+    {
+  "174374":{
+    "vni":174374,
+    "type":"L2",
+    "vxlanIf":"ONTEP1_174374",
+    "numMacs":42,
+    "numArpNd":0,
+    "numRemoteVteps":1,
+    "tenantVrf":"default",
+    "remoteVteps":[
+      "10.0.0.13"
+    ]
+  },
+  "172192":{
+    "vni":172192,
+    "type":"L2",
+    "vxlanIf":"ONTEP1_172192",
+    "numMacs":0,
+    "numArpNd":23,
+    "numRemoteVteps":1,
+    "tenantVrf":"default",
+    "remoteVteps":[
+      "10.0.0.13"
+    ]
+  }
+  }`)
 	expectedBGPMetrics = map[string]float64{
-		"frr_bgp_message_input_total{address_family=ipv4unicast,peer=192.168.0.2,vrf=default}":  100,
-		"frr_bgp_message_input_total{address_family=ipv4unicast,peer=192.168.0.3,vrf=default}":  0,
-		"frr_bgp_message_input_total{address_family=ipv4unicast,peer=192.168.1.2,vrf=red}":      100,
-		"frr_bgp_message_input_total{address_family=ipv4unicast,peer=192.168.1.3,vrf=red}":      200,
-		"frr_bgp_message_input_total{address_family=ipv6unicast,peer=fd00::1,vrf=default}":      29285,
-		"frr_bgp_message_input_total{address_family=ipv6unicast,peer=fd00::101,vrf=red}":        29285,
-		"frr_bgp_message_input_total{address_family=ipv6unicast,peer=fd00::105,vrf=red}":        0,
-		"frr_bgp_message_input_total{address_family=ipv6unicast,peer=fd00::5,vrf=default}":      0,
-		"frr_bgp_message_output_total{address_family=ipv4unicast,peer=192.168.0.2,vrf=default}": 100,
-		"frr_bgp_message_output_total{address_family=ipv4unicast,peer=192.168.0.3,vrf=default}": 0,
-		"frr_bgp_message_output_total{address_family=ipv4unicast,peer=192.168.1.2,vrf=red}":     100,
-		"frr_bgp_message_output_total{address_family=ipv4unicast,peer=192.168.1.3,vrf=red}":     200,
-		"frr_bgp_message_output_total{address_family=ipv6unicast,peer=fd00::1,vrf=default}":     29285,
-		"frr_bgp_message_output_total{address_family=ipv6unicast,peer=fd00::101,vrf=red}":       29285,
-		"frr_bgp_message_output_total{address_family=ipv6unicast,peer=fd00::105,vrf=red}":       0,
-		"frr_bgp_message_output_total{address_family=ipv6unicast,peer=fd00::5,vrf=default}":     0,
-		"frr_bgp_peer_groups_memory_bytes{address_family=ipv4unicast,vrf=default}":              0,
-		"frr_bgp_peer_groups_memory_bytes{address_family=ipv4unicast,vrf=red}":                  0,
-		"frr_bgp_peer_groups_memory_bytes{address_family=ipv6unicast,vrf=default}":              0,
-		"frr_bgp_peer_groups_memory_bytes{address_family=ipv6unicast,vrf=red}":                  0,
-		"frr_bgp_peer_groups{address_family=ipv4unicast,vrf=default}":                           0,
-		"frr_bgp_peer_groups{address_family=ipv4unicast,vrf=red}":                               0,
-		"frr_bgp_peer_groups{address_family=ipv6unicast,vrf=default}":                           0,
-		"frr_bgp_peer_groups{address_family=ipv6unicast,vrf=red}":                               0,
-		"frr_bgp_peer_up{address_family=ipv4unicast,peer=192.168.0.2,vrf=default}":              1,
-		"frr_bgp_peer_up{address_family=ipv4unicast,peer=192.168.0.3,vrf=default}":              0,
-		"frr_bgp_peer_up{address_family=ipv4unicast,peer=192.168.1.2,vrf=red}":                  1,
-		"frr_bgp_peer_up{address_family=ipv4unicast,peer=192.168.1.3,vrf=red}":                  0,
-		"frr_bgp_peer_up{address_family=ipv6unicast,peer=fd00::1,vrf=default}":                  1,
-		"frr_bgp_peer_up{address_family=ipv6unicast,peer=fd00::101,vrf=red}":                    1,
-		"frr_bgp_peer_up{address_family=ipv6unicast,peer=fd00::105,vrf=red}":                    0,
-		"frr_bgp_peer_up{address_family=ipv6unicast,peer=fd00::5,vrf=default}":                  0,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv4unicast,peer=192.168.0.2,vrf=default}":  10,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv4unicast,peer=192.168.0.3,vrf=default}":  0,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv4unicast,peer=192.168.1.2,vrf=red}":      20,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv4unicast,peer=192.168.1.3,vrf=red}":      0,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv6unicast,peer=fd00::1,vrf=default}":      87873,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv6unicast,peer=fd00::101,vrf=red}":        87873,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv6unicast,peer=fd00::105,vrf=red}":        0,
-		"frr_bgp_peer_uptime_seconds{address_family=ipv6unicast,peer=fd00::5,vrf=default}":      0,
-		"frr_bgp_peers_memory_usage_bytes{address_family=ipv4unicast,vrf=default}":              39936,
-		"frr_bgp_peers_memory_usage_bytes{address_family=ipv4unicast,vrf=red}":                  39936,
-		"frr_bgp_peers_memory_usage_bytes{address_family=ipv6unicast,vrf=default}":              59904,
-		"frr_bgp_peers_memory_usage_bytes{address_family=ipv6unicast,vrf=red}":                  59904,
-		"frr_bgp_peers{address_family=ipv4unicast,vrf=default}":                                 2,
-		"frr_bgp_peers{address_family=ipv4unicast,vrf=red}":                                     2,
-		"frr_bgp_peers{address_family=ipv6unicast,vrf=default}":                                 2,
-		"frr_bgp_peers{address_family=ipv6unicast,vrf=red}":                                     2,
-		"frr_bgp_prefixes_active{address_family=ipv4unicast,peer=192.168.0.2,vrf=default}":      0,
-		"frr_bgp_prefixes_active{address_family=ipv4unicast,peer=192.168.0.3,vrf=default}":      2,
-		"frr_bgp_prefixes_active{address_family=ipv4unicast,peer=192.168.1.2,vrf=red}":          2,
-		"frr_bgp_prefixes_active{address_family=ipv4unicast,peer=192.168.1.3,vrf=red}":          0,
-		"frr_bgp_prefixes_active{address_family=ipv6unicast,peer=fd00::1,vrf=default}":          1,
-		"frr_bgp_prefixes_active{address_family=ipv6unicast,peer=fd00::101,vrf=red}":            1,
-		"frr_bgp_prefixes_active{address_family=ipv6unicast,peer=fd00::105,vrf=red}":            0,
-		"frr_bgp_prefixes_active{address_family=ipv6unicast,peer=fd00::5,vrf=default}":          0,
-		"frr_bgp_rib_entries{address_family=ipv4unicast,vrf=default}":                           1,
-		"frr_bgp_rib_entries{address_family=ipv4unicast,vrf=red}":                               0,
-		"frr_bgp_rib_entries{address_family=ipv6unicast,vrf=default}":                           3,
-		"frr_bgp_rib_entries{address_family=ipv6unicast,vrf=red}":                               3,
-		"frr_bgp_rib_memory_usage_bytes{address_family=ipv4unicast,vrf=default}":                64,
-		"frr_bgp_rib_memory_usage_bytes{address_family=ipv4unicast,vrf=red}":                    0,
-		"frr_bgp_rib_memory_usage_bytes{address_family=ipv6unicast,vrf=default}":                456,
-		"frr_bgp_rib_memory_usage_bytes{address_family=ipv6unicast,vrf=red}":                    456,
+		"frr_bgp_peer_groups_count_total{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                           0.0,
+		"frr_bgp_peer_groups_count_total{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                               0.0,
+		"frr_bgp_peer_groups_count_total{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                           0.0,
+		"frr_bgp_peer_groups_count_total{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                               0.0,
+		"frr_bgp_peer_groups_memory_bytes{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                          0.0,
+		"frr_bgp_peer_groups_memory_bytes{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                              0.0,
+		"frr_bgp_peer_groups_memory_bytes{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                          0.0,
+		"frr_bgp_peer_groups_memory_bytes{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                              0.0,
+		"frr_bgp_peer_message_received_total{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}":        100.0,
+		"frr_bgp_peer_message_received_total{afi=ipv4,local_as=64512,peer=192.168.0.3,peer_as=64514,safi=unicast,vrf=default}":        0.0,
+		"frr_bgp_peer_message_received_total{afi=ipv4,local_as=64612,peer=192.168.1.2,peer_as=64613,safi=unicast,vrf=red}":            100.0,
+		"frr_bgp_peer_message_received_total{afi=ipv4,local_as=64612,peer=192.168.1.3,peer_as=64614,safi=unicast,vrf=red}":            200.0,
+		"frr_bgp_peer_message_received_total{afi=ipv6,local_as=64512,peer=fd00::1,peer_as=64513,safi=unicast,vrf=default}":            29285.0,
+		"frr_bgp_peer_message_received_total{afi=ipv6,local_as=64512,peer=fd00::5,peer_as=64514,safi=unicast,vrf=default}":            0.0,
+		"frr_bgp_peer_message_received_total{afi=ipv6,local_as=64612,peer=fd00::101,peer_as=64613,safi=unicast,vrf=red}":              29285.0,
+		"frr_bgp_peer_message_received_total{afi=ipv6,local_as=64612,peer=fd00::105,peer_as=64614,safi=unicast,vrf=red}":              0.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}":            100.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv4,local_as=64512,peer=192.168.0.3,peer_as=64514,safi=unicast,vrf=default}":            0.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv4,local_as=64612,peer=192.168.1.2,peer_as=64613,safi=unicast,vrf=red}":                100.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv4,local_as=64612,peer=192.168.1.3,peer_as=64614,safi=unicast,vrf=red}":                200.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv6,local_as=64512,peer=fd00::1,peer_as=64513,safi=unicast,vrf=default}":                29285.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv6,local_as=64512,peer=fd00::5,peer_as=64514,safi=unicast,vrf=default}":                0.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv6,local_as=64612,peer=fd00::101,peer_as=64613,safi=unicast,vrf=red}":                  29285.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv6,local_as=64612,peer=fd00::105,peer_as=64614,safi=unicast,vrf=red}":                  0.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}": 0.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv4,local_as=64512,peer=192.168.0.3,peer_as=64514,safi=unicast,vrf=default}": 2.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv4,local_as=64612,peer=192.168.1.2,peer_as=64613,safi=unicast,vrf=red}":     2.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv4,local_as=64612,peer=192.168.1.3,peer_as=64614,safi=unicast,vrf=red}":     0.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv6,local_as=64512,peer=fd00::1,peer_as=64513,safi=unicast,vrf=default}":     1.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv6,local_as=64512,peer=fd00::5,peer_as=64514,safi=unicast,vrf=default}":     0.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv6,local_as=64612,peer=fd00::101,peer_as=64613,safi=unicast,vrf=red}":       1.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv6,local_as=64612,peer=fd00::105,peer_as=64614,safi=unicast,vrf=red}":       0.0,
+		"frr_bgp_peers_count_total{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                                 2.0,
+		"frr_bgp_peers_count_total{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                                     2.0,
+		"frr_bgp_peers_count_total{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                                 2.0,
+		"frr_bgp_peers_count_total{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                     2.0,
+		"frr_bgp_peers_memory_bytes{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                                39936.0,
+		"frr_bgp_peers_memory_bytes{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                                    39936.0,
+		"frr_bgp_peers_memory_bytes{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                                59904.0,
+		"frr_bgp_peers_memory_bytes{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                    59904.0,
+		"frr_bgp_peer_state{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}":                         1.0,
+		"frr_bgp_peer_state{afi=ipv4,local_as=64512,peer=192.168.0.3,peer_as=64514,safi=unicast,vrf=default}":                         0.0,
+		"frr_bgp_peer_state{afi=ipv4,local_as=64612,peer=192.168.1.2,peer_as=64613,safi=unicast,vrf=red}":                             1.0,
+		"frr_bgp_peer_state{afi=ipv4,local_as=64612,peer=192.168.1.3,peer_as=64614,safi=unicast,vrf=red}":                             0.0,
+		"frr_bgp_peer_state{afi=ipv6,local_as=64512,peer=fd00::1,peer_as=64513,safi=unicast,vrf=default}":                             1.0,
+		"frr_bgp_peer_state{afi=ipv6,local_as=64512,peer=fd00::5,peer_as=64514,safi=unicast,vrf=default}":                             0.0,
+		"frr_bgp_peer_state{afi=ipv6,local_as=64612,peer=fd00::101,peer_as=64613,safi=unicast,vrf=red}":                               1.0,
+		"frr_bgp_peer_state{afi=ipv6,local_as=64612,peer=fd00::105,peer_as=64614,safi=unicast,vrf=red}":                               0.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}":                10.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv4,local_as=64512,peer=192.168.0.3,peer_as=64514,safi=unicast,vrf=default}":                0.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv4,local_as=64612,peer=192.168.1.2,peer_as=64613,safi=unicast,vrf=red}":                    20.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv4,local_as=64612,peer=192.168.1.3,peer_as=64614,safi=unicast,vrf=red}":                    0.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv6,local_as=64512,peer=fd00::1,peer_as=64513,safi=unicast,vrf=default}":                    87873.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv6,local_as=64512,peer=fd00::5,peer_as=64514,safi=unicast,vrf=default}":                    0.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv6,local_as=64612,peer=fd00::101,peer_as=64613,safi=unicast,vrf=red}":                      87873.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv6,local_as=64612,peer=fd00::105,peer_as=64614,safi=unicast,vrf=red}":                      0.0,
+		"frr_bgp_rib_count_total{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                                   1.0,
+		"frr_bgp_rib_count_total{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                                       0.0,
+		"frr_bgp_rib_count_total{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                                   3.0,
+		"frr_bgp_rib_count_total{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                       3.0,
+		"frr_bgp_rib_memory_bytes{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                                  64.0,
+		"frr_bgp_rib_memory_bytes{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                                      0.0,
+		"frr_bgp_rib_memory_bytes{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                                  456.0,
+		"frr_bgp_rib_memory_bytes{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                      456.0,
+	}
+	expectedBgpL2vpnMetrics = map[string]float64{
+		"frr_bgp_l2vpn_evpn_num_arp_nd_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":       23.000000,
+		"frr_bgp_l2vpn_evpn_num_arp_nd_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":       0.000000,
+		"frr_bgp_l2vpn_evpn_num_macs_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":         0.000000,
+		"frr_bgp_l2vpn_evpn_num_macs_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":         42.000000,
+		"frr_bgp_l2vpn_evpn_num_remote_vteps_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}": 1.000000,
+		"frr_bgp_l2vpn_evpn_num_remote_vteps_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}": 1.000000,
 	}
 )
 
-func TestProcessBGPSummary(t *testing.T) {
-	ch := make(chan prometheus.Metric, 1024)
-	if err := processBGPSummary(ch, bgpSumV4Unicast, "ipv4unicast"); err != nil {
-		t.Errorf("error calling processBGPSummary ipv4unicast: %s", err)
-	}
-	if err := processBGPSummary(ch, bgpSumV6Unicast, "ipv6unicast"); err != nil {
-		t.Errorf("error calling processBGPSummary ipv6unicast: %s", err)
-	}
-	close(ch)
-
-	// Create a map of following format:
-	//   key: metric_name{labelname:labelvalue,...}
-	//   value: metric value
+func prepareMetrics(ch chan prometheus.Metric, t *testing.T) map[string]float64 {
 	gotMetrics := make(map[string]float64)
 
 	for {
@@ -317,9 +341,12 @@ func TestProcessBGPSummary(t *testing.T) {
 
 		gotMetrics[fmt.Sprintf("%s{%s}", metricName, strings.Join(labels, ","))] = value
 	}
+	return gotMetrics
+}
 
+func compareMetrics(t *testing.T, gotMetrics map[string]float64, expectedMetrics map[string]float64) {
 	for metricName, metricVal := range gotMetrics {
-		if expectedMetricVal, ok := expectedBGPMetrics[metricName]; ok {
+		if expectedMetricVal, ok := expectedMetrics[metricName]; ok {
 			if expectedMetricVal != metricVal {
 				t.Errorf("metric %s expected value %v got %v", metricName, expectedMetricVal, metricVal)
 			}
@@ -329,9 +356,34 @@ func TestProcessBGPSummary(t *testing.T) {
 		}
 	}
 
-	for expectedMetricName, expectedMetricVal := range expectedBGPMetrics {
+	for expectedMetricName, expectedMetricVal := range expectedMetrics {
 		if _, ok := gotMetrics[expectedMetricName]; !ok {
 			t.Errorf("missing metric: %s value %v", expectedMetricName, expectedMetricVal)
 		}
 	}
+}
+
+func TestProcessBGPSummary(t *testing.T) {
+	ch := make(chan prometheus.Metric, 1024)
+	if err := processBGPSummary(ch, bgpSumV4Unicast, "ipv4", "unicast"); err != nil {
+		t.Errorf("error calling processBGPSummary ipv4unicast: %s", err)
+	}
+	if err := processBGPSummary(ch, bgpSumV6Unicast, "ipv6", "unicast"); err != nil {
+		t.Errorf("error calling processBGPSummary ipv6unicast: %s", err)
+	}
+	close(ch)
+
+	gotMetrics := prepareMetrics(ch, t)
+	compareMetrics(t, gotMetrics, expectedBGPMetrics)
+}
+
+func TestProcessBgpL2vpnEvpnSummary(t *testing.T) {
+	ch := make(chan prometheus.Metric, 1024)
+	if err := processBgpL2vpnEvpnSummary(ch, evpnVniJson); err != nil {
+		t.Errorf("error calling processBgpL2vpnEvpnSummary: %s", err)
+	}
+	close(ch)
+
+	gotMetrics := prepareMetrics(ch, t)
+	compareMetrics(t, gotMetrics, expectedBgpL2vpnMetrics)
 }
