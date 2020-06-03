@@ -264,9 +264,9 @@ func getBgpL2vpnDesc() map[string]*prometheus.Desc {
 	}
 	bgpL2vpnLabels := []string{"vni", "type", "vxlanIf", "tenantVrf"}
 	bgpL2vpnDesc = map[string]*prometheus.Desc{
-		"numMacs":        colPromDesc(bgpL2vpnMetricPrefix, "num_macs_count_total", "Number of known MAC addresses", bgpL2vpnLabels),
-		"numArpNd":       colPromDesc(bgpL2vpnMetricPrefix, "num_arp_nd_count_total", "Number of ARP / ND entries", bgpL2vpnLabels),
-		"numRemoteVteps": colPromDesc(bgpL2vpnMetricPrefix, "num_remote_vteps_count_total", "Number of known remote VTEPs", bgpL2vpnLabels),
+		"numMacs":        colPromDesc(bgpL2vpnMetricPrefix, "mac_count_total", "Number of known MAC addresses", bgpL2vpnLabels),
+		"numArpNd":       colPromDesc(bgpL2vpnMetricPrefix, "arp_nd_count_total", "Number of ARP / ND entries", bgpL2vpnLabels),
+		"numRemoteVteps": colPromDesc(bgpL2vpnMetricPrefix, "remote_vtep_count_total", "Number of known remote VTEPs", bgpL2vpnLabels),
 	}
 	return bgpL2vpnDesc
 }

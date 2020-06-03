@@ -299,12 +299,12 @@ var (
 		"frr_bgp_rib_memory_bytes{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                      456.0,
 	}
 	expectedBgpL2vpnMetrics = map[string]float64{
-		"frr_bgp_l2vpn_evpn_num_arp_nd_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":       23.000000,
-		"frr_bgp_l2vpn_evpn_num_arp_nd_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":       0.000000,
-		"frr_bgp_l2vpn_evpn_num_macs_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":         0.000000,
-		"frr_bgp_l2vpn_evpn_num_macs_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":         42.000000,
-		"frr_bgp_l2vpn_evpn_num_remote_vteps_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}": 1.000000,
-		"frr_bgp_l2vpn_evpn_num_remote_vteps_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}": 1.000000,
+		"frr_bgp_l2vpn_evpn_arp_nd_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":      23.000000,
+		"frr_bgp_l2vpn_evpn_arp_nd_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":      0.000000,
+		"frr_bgp_l2vpn_evpn_mac_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":         0.000000,
+		"frr_bgp_l2vpn_evpn_mac_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":         42.000000,
+		"frr_bgp_l2vpn_evpn_remote_vtep_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}": 1.000000,
+		"frr_bgp_l2vpn_evpn_remote_vtep_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}": 1.000000,
 	}
 )
 
