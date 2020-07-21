@@ -376,6 +376,15 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PrefixReceivedCount, peerLabels...)
 				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
 
+				if *bgpPeerTypes {
+					for _, descKey := range *frrBGPDescKey {
+						if peerDescJSON[peerIP][descKey] != "" {
+							if _, exist := peerTypes[strings.TrimSpace(peerDescJSON[peerIP][descKey])]; !exist {
+								peerTypes[strings.TrimSpace(peerDescJSON[peerIP][descKey])] = 0
+							}
+						}
+					}
+				}
 				peerState := 0.0
 				if strings.ToLower(peerData.State) == "established" {
 					peerState = 1
