@@ -101,7 +101,7 @@ router bgp 64512
 
 Note, it is recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
 
-### BGP: Advertised Prexies to a Peer
+### BGP: Advertised Prefixes to a Peer
 The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json'` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial. Due to the potential negative performance implications of running `vtysh` for every BGP peer, this metric is disabled by default.
 
 ### BGP: frr_bgp_peer_types_up
