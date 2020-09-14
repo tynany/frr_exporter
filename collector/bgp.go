@@ -373,7 +373,11 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				}
 				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
 				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, peerLabels...)
-				newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PrefixReceivedCount, peerLabels...)
+				if peerData.PrefixReceivedCount != nil {
+				        newGauge(ch, bgpDesc["prefixReceivedCount"], *peerData.PrefixReceivedCount, peerLabels...)
+				} else {
+				        newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PfxRcd, peerLabels...)
+				}
 				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
 
 				if *bgpPeerTypes {
@@ -480,7 +484,8 @@ type bgpPeerSession struct {
 	MsgRcvd             float64
 	MsgSent             float64
 	PeerUptimeMsec      float64
-	PrefixReceivedCount float64
+	PrefixReceivedCount *float64
+	PfxRcd              float64
 }
 type bgpAdvertisedRoutes struct {
 	TotalPrefixCounter float64 `json:"totalPrefixCounter"`
