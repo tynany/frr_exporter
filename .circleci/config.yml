@@ -11,7 +11,8 @@ jobs:
       - run: make setup_promu
       - run: ./promu crossbuild
       - run: ./promu crossbuild tarballs
-      - run: ./promu release
+      - run: ./promu checksum .tarballs
+      - run: ./promu release .tarballs
 workflows:
   version: 2
   release:
