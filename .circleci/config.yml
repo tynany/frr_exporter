@@ -3,10 +3,14 @@ jobs:
   release:
     working_directory: /go/src/github.com/tynany/frr_exporter
     docker:
+      # Whenever the Go version is updated here, .promu.yml should also be updated.
       - image: circleci/golang:1.13
     steps:
       - checkout
-      - run: curl -sL https://git.io/goreleaser | bash
+      - run: make setup_promu
+      - run: ./promu crossbuild
+      - run: ./promu crossbuild tarballs
+      - run: ./promu release
 workflows:
   version: 2
   release:

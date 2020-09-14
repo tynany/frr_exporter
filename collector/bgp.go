@@ -373,8 +373,16 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				}
 				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
 				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, peerLabels...)
-				newGauge(ch, bgpDesc["prefixReceivedCount"], peerData.PrefixReceivedCount, peerLabels...)
 				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
+
+				// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of recieved prefixes, but in later versions it was changed to PfxRcd.
+				prefixReceived := 0.0
+				if peerData.PrefixReceivedCount != 0 {
+					prefixReceived = peerData.PrefixReceivedCount
+				} else if peerData.PfxRcd != 0 {
+					prefixReceived = peerData.PfxRcd
+				}
+				newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
 
 				if *bgpPeerTypes {
 					for _, descKey := range *frrBGPDescKey {
@@ -481,6 +489,7 @@ type bgpPeerSession struct {
 	MsgSent             float64
 	PeerUptimeMsec      float64
 	PrefixReceivedCount float64
+	PfxRcd              float64
 }
 type bgpAdvertisedRoutes struct {
 	TotalPrefixCounter float64 `json:"totalPrefixCounter"`

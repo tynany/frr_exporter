@@ -47,7 +47,7 @@ var (
       "inq":0,
       "peerUptime":"never",
       "peerUptimeMsec":0,
-      "prefixReceivedCount":2,
+      "pfxRcd":2,
       "state":"Active",
       "idType":"ipv4"
     }
