@@ -7,6 +7,7 @@ jobs:
       - image: circleci/golang:1.13
     steps:
       - checkout
+      - setup_remote_docker
       - run: make setup_promu
       - run: ./promu crossbuild
       - run: ./promu crossbuild tarballs
