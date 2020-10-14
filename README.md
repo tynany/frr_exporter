@@ -91,7 +91,7 @@ router bgp 64512
  neighbor 192.168.0.1 description {"desc":"important peer"}
 ```
 
-If an unstructured description is preferred, pass the `--collector.bgp.peer-descriptions.plain-text` flag. Example configuration:
+If an unstructured description is preferred, additionally to `--collector.bgp.peer-descriptions` pass the `--collector.bgp.peer-descriptions.plain-text` flag. Example configuration:
 
 ```
 router bgp 64512
