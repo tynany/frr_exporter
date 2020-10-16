@@ -50,6 +50,20 @@ var (
       "pfxRcd":2,
       "state":"Active",
       "idType":"ipv4"
+    },
+    "192.168.0.4":{
+      "remoteAs":64515,
+      "version":4,
+      "msgRcvd":0,
+      "msgSent":0,
+      "tableVersion":0,
+      "outq":0,
+      "inq":0,
+      "peerUptime":"never",
+      "peerUptimeMsec":0,
+      "pfxRcd":2,
+      "state":"Idle (Admin)",
+      "idType":"ipv4"
     }
   },
   "totalPeers":2,
@@ -297,6 +311,11 @@ var (
 		"frr_bgp_rib_memory_bytes{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                                      0.0,
 		"frr_bgp_rib_memory_bytes{afi=ipv6,local_as=64512,safi=unicast,vrf=default}":                                                  456.0,
 		"frr_bgp_rib_memory_bytes{afi=ipv6,local_as=64612,safi=unicast,vrf=red}":                                                      456.0,
+		"frr_bgp_peer_state{afi=ipv4,local_as=64512,peer=192.168.0.4,peer_as=64515,safi=unicast,vrf=default}":                         2.0,
+		"frr_bgp_peer_message_sent_total{afi=ipv4,local_as=64512,peer=192.168.0.4,peer_as=64515,safi=unicast,vrf=default}":            0.0,
+		"frr_bgp_peer_prefixes_received_count_total{afi=ipv4,local_as=64512,peer=192.168.0.4,peer_as=64515,safi=unicast,vrf=default}": 2.0,
+		"frr_bgp_peer_uptime_seconds{afi=ipv4,local_as=64512,peer=192.168.0.4,peer_as=64515,safi=unicast,vrf=default}":                0.0,
+		"frr_bgp_peer_message_received_total{afi=ipv4,local_as=64512,peer=192.168.0.4,peer_as=64515,safi=unicast,vrf=default}":        0.0,
 	}
 	expectedBgpL2vpnMetrics = map[string]float64{
 		"frr_bgp_l2vpn_evpn_arp_nd_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":      23.000000,
