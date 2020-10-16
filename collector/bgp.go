@@ -251,7 +251,7 @@ func getBgpDesc() map[string]*prometheus.Desc {
 		"msgSent":               colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
 		"prefixReceivedCount":   colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number of prefixes received.", bgpPeerLabels),
 		"prefixAdvertisedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_advertised_count_total", "Number of prefixes advertised.", bgpPeerLabels),
-		"state":                 colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (1 = Established, 0 = Down).", bgpPeerLabels),
+		"state":                 colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (2 = Administratively Down, 1 = Established, 0 = Down).", bgpPeerLabels),
 		"UptimeSec":             colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
 		"peerTypesUp":           colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
 	}
@@ -394,7 +394,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					}
 				}
 				peerState := 0.0
-				if strings.ToLower(peerData.State) == "established" {
+				switch peerDataState := strings.ToLower(peerData.State); peerDataState {
+				case "established":
 					peerState = 1
 					if *bgpPeerTypes {
 						for _, descKey := range *frrBGPDescKey {
@@ -403,6 +404,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 							}
 						}
 					}
+				case "idle (admin)":
+					peerState = 2
 				}
 				newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
 
