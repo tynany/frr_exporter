@@ -15,7 +15,7 @@ var (
 
 	ospfIfaceLabels = []string{"vrf", "iface", "area"}
 	ospfDesc        = map[string]*prometheus.Desc{
-		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors deteceted.", ospfIfaceLabels),
+		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors detected.", ospfIfaceLabels),
 		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", ospfIfaceLabels),
 	}
 	ospfErrors      = []error{}
