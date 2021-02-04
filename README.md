@@ -40,6 +40,7 @@ Flags:
       --frr.vtysh.timeout="20s"  The timeout when running vtysh commends (default 20s).
       --collector.bgp            Collect BGP Metrics (default: enabled).
       --collector.ospf           Collect OSPF Metrics (default: enabled).
+      --collector.bfd            Collect BFD Metrics (default: enabled).
       --collector.bgp6           Collect BGP IPv6 Metrics (default: disabled).
       --collector.bgpl2vpn       Collect BGP L2VPN Metrics (default: disabled).
       --log.level="info"         Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
@@ -72,12 +73,13 @@ Name | Description
 --- | ---
 BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer received prefixes<br> - Peer advertised prefixes<br> - Peer state (established/down)<br> - Peer uptime
 OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
+BFD | BFD Peer metrics:<br> - Count of total number of peers<br> - BFD Peer State (up/down)<br> - BFD Peer Uptime in seconds
 
 ### Disabled by Default
 Name | Description
 --- | ---
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
-BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
+BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime 
 
 ### VTYSH
 The vtysh command is heavily utilised to extract metrics from FRR. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
