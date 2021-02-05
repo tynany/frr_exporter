@@ -17,7 +17,7 @@ var (
 	bfdDesc        = map[string]*prometheus.Desc{
 		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", bfdCountLabels),
 		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", bfdPeerLabels),
-		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer", bfdPeerLabels),
+		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer (1 = Up, 0 = Down).", bfdPeerLabels),
 	}
 	bfdErrors      = []error{}
 	totalBFDErrors = 0.0
