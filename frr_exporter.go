@@ -52,6 +52,13 @@ func initCollectors() {
 		Errors:        bgpl2vpn,
 		CLIHelper:     bgpl2vpn,
 	})
+	bfd := collector.NewBFDCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          bfd.Name(),
+		PromCollector: bfd,
+		Errors:        bfd,
+		CLIHelper:     bfd,
+	})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +96,9 @@ func parseCLI() {
 		if enabledByDefault == true {
 			defaultState = "enabled"
 		}
-		collector.Enabled = kingpin.Flag(fmt.Sprintf("collector.%s", collector.CLIHelper.Name()), fmt.Sprintf("%s (default: %s).", collector.CLIHelper.Help(), defaultState)).Default(strconv.FormatBool(enabledByDefault)).Bool()
+		flagName := fmt.Sprintf("collector.%s", collector.CLIHelper.Name())
+		helpString := fmt.Sprintf("%s (default: %s).", collector.CLIHelper.Help(), defaultState)
+		collector.Enabled = kingpin.Flag(flagName, helpString).Default(strconv.FormatBool(enabledByDefault)).Bool()
 	}
 	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("frr_exporter"))
