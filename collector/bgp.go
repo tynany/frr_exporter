@@ -169,7 +169,7 @@ type vxLanStats struct {
 	VxlanIf        string
 	NumMacs        float64
 	NumArpNd       float64
-	NumRemoteVteps float64
+	NumRemoteVteps interface{} // it's possible for the numRemoteVteps field to contain non-int values such as "n\/a"
 	TenantVrf      string
 }
 
@@ -195,7 +195,12 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 		bgpL2vpnLabels := []string{strconv.Itoa(vxLanStat.Vni), vxLanStat.VxlanType, vxLanStat.VxlanIf, vxLanStat.TenantVrf}
 		newGauge(ch, bgpL2vpnDesc["numMacs"], vxLanStat.NumMacs, bgpL2vpnLabels...)
 		newGauge(ch, bgpL2vpnDesc["numArpNd"], vxLanStat.NumArpNd, bgpL2vpnLabels...)
-		newGauge(ch, bgpL2vpnDesc["numRemoteVteps"], vxLanStat.NumRemoteVteps, bgpL2vpnLabels...)
+		remoteVteps, ok := vxLanStat.NumRemoteVteps.(float64)
+		if !ok {
+			remoteVteps = -1
+		}
+		newGauge(ch, bgpL2vpnDesc["numRemoteVteps"], remoteVteps, bgpL2vpnLabels...)
+
 	}
 	return nil
 }
@@ -267,7 +272,7 @@ func getBgpL2vpnDesc() map[string]*prometheus.Desc {
 	bgpL2vpnDesc = map[string]*prometheus.Desc{
 		"numMacs":        colPromDesc(bgpL2vpnMetricPrefix, "mac_count_total", "Number of known MAC addresses", bgpL2vpnLabels),
 		"numArpNd":       colPromDesc(bgpL2vpnMetricPrefix, "arp_nd_count_total", "Number of ARP / ND entries", bgpL2vpnLabels),
-		"numRemoteVteps": colPromDesc(bgpL2vpnMetricPrefix, "remote_vtep_count_total", "Number of known remote VTEPs", bgpL2vpnLabels),
+		"numRemoteVteps": colPromDesc(bgpL2vpnMetricPrefix, "remote_vtep_count_total", "Number of known remote VTEPs. A value of -1 indicates a non-integer output from FRR, such as n/a.", bgpL2vpnLabels),
 	}
 	return bgpL2vpnDesc
 }

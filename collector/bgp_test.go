@@ -239,7 +239,7 @@ var (
     "vxlanIf":"ONTEP1_172192",
     "numMacs":0,
     "numArpNd":23,
-    "numRemoteVteps":1,
+    "numRemoteVteps":"n\/a",
     "tenantVrf":"default",
     "remoteVteps":[
       "10.0.0.13"
@@ -322,7 +322,7 @@ var (
 		"frr_bgp_l2vpn_evpn_arp_nd_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":      0.000000,
 		"frr_bgp_l2vpn_evpn_mac_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}":         0.000000,
 		"frr_bgp_l2vpn_evpn_mac_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}":         42.000000,
-		"frr_bgp_l2vpn_evpn_remote_vtep_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}": 1.000000,
+		"frr_bgp_l2vpn_evpn_remote_vtep_count_total{tenantVrf=default,type=L2,vni=172192,vxlanIf=ONTEP1_172192}": -1.000000,
 		"frr_bgp_l2vpn_evpn_remote_vtep_count_total{tenantVrf=default,type=L2,vni=174374,vxlanIf=ONTEP1_174374}": 1.000000,
 	}
 )
