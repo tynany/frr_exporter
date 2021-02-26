@@ -392,7 +392,6 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				}
 				newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
 
-
 				if *bgpPeerTypes {
 					for _, descKey := range *frrBGPDescKey {
 						if peerDescJSON[peerIP][descKey] != "" {
