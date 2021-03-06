@@ -29,8 +29,8 @@ Flags:
       --collector.bgp.peer-descriptions.plain-text
                                  Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
       --collector.bgp.advertised-prefixes
-                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer
-                                 (default: disabled).
+                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent
+                                 field (default: disabled).
       --web.listen-address=":9342"
                                  Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
@@ -104,6 +104,8 @@ router bgp 64512
 Note, it is recommended to leave this feature disabled as peer descriptions can easily change, resulting in a new time series.
 
 ### BGP: Advertised Prefixes to a Peer
+This is an option for older versions of FRR. If your FRR shows the "PfxSnt" field for Peers in the Established state in the output of "show bgp summary json", you don't need to enable this option.
+
 The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json'` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial. Due to the potential negative performance implications of running `vtysh` for every BGP peer, this metric is disabled by default.
 
 ### BGP: frr_bgp_peer_types_up

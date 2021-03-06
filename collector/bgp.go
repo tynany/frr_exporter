@@ -33,7 +33,7 @@ var (
 	frrBGPDescKey         = kingpin.Flag("collector.bgp.peer-types.keys", "Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports multiple values (default: type).").Default("type").Strings()
 	bgpPeerDescs          = kingpin.Flag("collector.bgp.peer-descriptions", "Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
 	bgpPeerDescsText      = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
-	bgpAdvertisedPrefixes = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer (default: disabled).").Default("False").Bool()
+	bgpAdvertisedPrefixes = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
 )
 
 // BGPCollector collects BGP metrics, implemented as per prometheus.Collector interface.
@@ -361,7 +361,10 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
 				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
 
-				if *bgpAdvertisedPrefixes {
+				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
+				if peerData.PfxSnt != nil {
+					newGauge(ch, bgpDesc["prefixAdvertisedCount"], *peerData.PfxSnt, peerLabels...)
+				} else if *bgpAdvertisedPrefixes {
 					wgAdvertisedPrefixes.Add(1)
 					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, peerLabels...)
 				}
@@ -498,6 +501,7 @@ type bgpPeerSession struct {
 	PeerUptimeMsec      float64
 	PrefixReceivedCount float64
 	PfxRcd              float64
+	PfxSnt              *float64
 }
 type bgpAdvertisedRoutes struct {
 	TotalPrefixCounter float64 `json:"totalPrefixCounter"`
