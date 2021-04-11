@@ -54,6 +54,7 @@ func (*OSPFCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *OSPFCollector) Collect(ch chan<- prometheus.Metric) {
+	ospfErrors = []error{}
 	jsonOSPFInterface, err := getOSPFInterface()
 	if err != nil {
 		totalOSPFErrors++

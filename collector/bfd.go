@@ -55,6 +55,7 @@ func (*BFDCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *BFDCollector) Collect(ch chan<- prometheus.Metric) {
+	bfdErrors = []error{}
 	jsonBFDInterface, err := getBFDInterface()
 	if err != nil {
 		totalBFDErrors++
