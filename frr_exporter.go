@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os/user"
 	"strconv"
 	"time"
 
@@ -64,6 +65,7 @@ func initCollectors() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	registry := prometheus.NewRegistry()
 	enabledCollectors := []*collector.Collector{}
+	user, _ := user.Current()
 	for _, collector := range collectors {
 		if *collector.Enabled {
 			enabledCollectors = append(enabledCollectors, collector)
@@ -71,6 +73,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	ne := collector.NewExporter(enabledCollectors)
 	ne.SetVTYSHPath(*frrVTYSHPath)
+	ne.SetVTYSHUsername(user.Username)
 
 	// error checking is done as part of parseCLI
 	frrTimeout, _ := time.ParseDuration(*frrVTYSHTimeout)

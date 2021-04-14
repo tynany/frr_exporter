@@ -22,8 +22,9 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
-	vtyshPath    string
-	vtyshTimeout time.Duration
+	vtyshUsername string
+	vtyshPath     string
+	vtyshTimeout  time.Duration
 )
 
 // CLIHelper is used to populate flags.
@@ -69,6 +70,11 @@ func NewExporter(collectors []*Collector) *Exporters {
 // SetVTYSHPath sets the path of vtysh.
 func (e *Exporters) SetVTYSHPath(path string) {
 	vtyshPath = path
+}
+
+// SetVTYSHUsername sets the first command to execute vtysh.
+func (e *Exporters) SetVTYSHUsername(username string) {
+	vtyshUsername = username
 }
 
 // SetVTYSHTimeout sets the path of vtysh.

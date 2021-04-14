@@ -160,7 +160,15 @@ func (*BGPL2VPNCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func getBgpL2vpnEvpnSummary() ([]byte, error) {
-	return execVtyshCommand("-c", "show evpn vni json")
+	var args []string
+
+        if vtyshUsername != "root" {
+                args = []string{vtyshPath, fmt.Sprintf("-c show evpn vni json")}
+        } else {
+                args = []string{fmt.Sprintf("-c show evpn vni json")}
+        }
+
+	return execVtyshCommand(args...)
 }
 
 type vxLanStats struct {
@@ -171,17 +179,6 @@ type vxLanStats struct {
 	NumArpNd       float64
 	NumRemoteVteps interface{} // it's possible for the numRemoteVteps field to contain non-int values such as "n\/a"
 	TenantVrf      string
-}
-
-func execVtyshCommand(args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
-
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
 }
 
 func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum []byte) error {
@@ -320,7 +317,13 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 }
 
 func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
-	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
+	var args []string
+
+	if vtyshUsername != "root" {
+		args = []string{vtyshPath, fmt.Sprintf("-c show bgp vrf all %s %s summary json", AFI, SAFI)}
+	} else {
+		args = []string{fmt.Sprintf("-c show bgp vrf all %s %s summary json", AFI, SAFI)}
+	}
 
 	return execVtyshCommand(args...)
 }
