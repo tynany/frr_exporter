@@ -213,7 +213,7 @@ func (c *BGPL2VPNCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		totalBGPL2VPNErrors++
 		bgpL2VPNErrors = append(bgpL2VPNErrors, fmt.Errorf("cannot execute 'show evpn vni json': %s", err))
-	} else {
+	} else if len(jsonBGPL2vpnEvpnSum) != 0 {
 		if err := processBgpL2vpnEvpnSummary(ch, jsonBGPL2vpnEvpnSum); err != nil {
 			totalBGPL2VPNErrors++
 			bgpL2VPNErrors = append(bgpL2VPNErrors, err)
