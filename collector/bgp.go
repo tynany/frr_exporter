@@ -361,14 +361,6 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
 				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
 
-				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
-				if peerData.PfxSnt != nil {
-					newGauge(ch, bgpDesc["prefixAdvertisedCount"], *peerData.PfxSnt, peerLabels...)
-				} else if *bgpAdvertisedPrefixes {
-					wgAdvertisedPrefixes.Add(1)
-					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, peerLabels...)
-				}
-
 				if *bgpPeerDescs {
 					d := ""
 					if *bgpPeerDescsText {
@@ -379,6 +371,15 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
 					peerLabels = append(peerLabels, d)
 				}
+
+				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
+				if peerData.PfxSnt != nil {
+					newGauge(ch, bgpDesc["prefixAdvertisedCount"], *peerData.PfxSnt, peerLabels...)
+				} else if *bgpAdvertisedPrefixes {
+					wgAdvertisedPrefixes.Add(1)
+					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, peerLabels...)
+				}
+
 				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
 				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, peerLabels...)
 				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
