@@ -22,9 +22,9 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
-	vtyshPath     string
-	vtyshTimeout  time.Duration
-	vtyshSudo     bool
+	vtyshPath    string
+	vtyshTimeout time.Duration
+	vtyshSudo    bool
 )
 
 // CLIHelper is used to populate flags.
