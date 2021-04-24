@@ -12,7 +12,7 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
 	defer cancel()
 
-	if vtyshUsername != "root" {
+	if vtyshSudo == true {
 		output, err = exec.CommandContext(ctx, "/usr/bin/sudo", args...).Output()
 	} else {
 		output, err = exec.CommandContext(ctx, vtyshPath, args...).Output()
