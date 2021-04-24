@@ -78,7 +78,7 @@ func (*OSPFCollector) CollectTotalErrors() float64 {
 func getOSPFInterface() ([]byte, error) {
 	var args []string
 
-        if vtyshUsername != "root" {
+        if vtyshSudo == true {
 		args = []string{vtyshPath, fmt.Sprintf("-c show ip ospf vrf all interface json")}
         } else {
 		args = []string{fmt.Sprintf("-c show ip ospf vrf all interface json")}
