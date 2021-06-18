@@ -160,15 +160,7 @@ func (*BGPL2VPNCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func getBgpL2vpnEvpnSummary() ([]byte, error) {
-	var args []string
-
-        if vtyshSudo == true {
-                args = []string{vtyshPath, fmt.Sprintf("-c show evpn vni json")}
-        } else {
-                args = []string{fmt.Sprintf("-c show evpn vni json")}
-        }
-
-	return execVtyshCommand(args...)
+	return execVtyshCommand("-c", "show evpn vni json")
 }
 
 type vxLanStats struct {
@@ -317,13 +309,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string) {
 }
 
 func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
-	var args []string
-
-	if vtyshSudo == true {
-		args = []string{vtyshPath, fmt.Sprintf("-c show bgp vrf all %s %s summary json", AFI, SAFI)}
-	} else {
-		args = []string{fmt.Sprintf("-c show bgp vrf all %s %s summary json", AFI, SAFI)}
-	}
+	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
 
 	return execVtyshCommand(args...)
 }

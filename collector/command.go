@@ -13,7 +13,9 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 	defer cancel()
 
 	if vtyshSudo == true {
-		output, err = exec.CommandContext(ctx, "/usr/bin/sudo", args...).Output()
+		a := []string{vtyshPath}
+		a = append(a, args...)
+		output, err = exec.CommandContext(ctx, "/usr/bin/sudo", a...).Output()
 	} else {
 		output, err = exec.CommandContext(ctx, vtyshPath, args...).Output()
 	}
