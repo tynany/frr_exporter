@@ -111,10 +111,11 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 					if err := json.Unmarshal(interfaceValue, &newIface); err != nil {
 						return fmt.Errorf("cannot unmarshal interface json: %s", err)
 					}
-					// The labels are "vrf", "newIface", "area"
-					labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
-					newGauge(ch, ospfDesc["ospfIfaceNeigh"], newIface.NbrCount, labels...)
-					newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], newIface.NbrAdjacentCount, labels...)
+					if !newIface.TimerPassiveIface {
+						// The labels are "vrf", "newIface", "area"
+						labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
+						ospfMetrics(ch, newIface, labels)
+					}
 				}
 			default:
 				// All other keys are interfaces.
@@ -122,18 +123,25 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 				if err := json.Unmarshal(ospfInstanceVal, &iface); err != nil {
 					return fmt.Errorf("cannot unmarshal interface json: %s", err)
 				}
-				// The labels are "vrf", "iface", "area"
-				labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
-				newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
-				newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
+				if !iface.TimerPassiveIface {
+					// The labels are "vrf", "iface", "area"
+					labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
+					ospfMetrics(ch, iface, labels)
+				}
 			}
 		}
 	}
 	return nil
 }
 
+func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string) {
+	newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
+	newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
+}
+
 type ospfIface struct {
-	NbrCount         float64
-	NbrAdjacentCount float64
-	Area             string
+	NbrCount          float64
+	NbrAdjacentCount  float64
+	Area              string
+	TimerPassiveIface bool
 }

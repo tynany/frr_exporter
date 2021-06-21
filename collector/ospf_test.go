@@ -128,7 +128,33 @@ var (
 	      "timerHelloInMsecs":7769,
 	      "nbrCount":1,
 	      "nbrAdjacentCount":1
-	    }
+	    },
+		"peerlink.4094":{
+		  "ifUp":true,
+		  "ifIndex":62,
+		  "mtuBytes":9000,
+		  "bandwidthMbit":2000,
+		  "ifFlags":"<UP,BROADCAST,RUNNING,MULTICAST>",
+		  "ospfEnabled":true,
+		  "ipAddress":"169.254.1.1",
+		  "ipAddressPrefixlen":30,
+		  "ospfIfType":"Broadcast",
+		  "localIfUsed":"169.254.1.3",
+		  "area":"0.0.0.75 [Stub]",
+		  "routerId":"10.200.1.222",
+		  "networkType":"BROADCAST",
+		  "cost":50,
+		  "transmitDelaySecs":1,
+		  "state":"DR",
+		  "priority":1,
+		  "timerMsecs":10000,
+		  "timerDeadSecs":40,
+		  "timerWaitSecs":40,
+		  "timerRetransmitSecs":5,
+		  "timerPassiveIface":true,
+		  "nbrCount":0,
+		  "nbrAdjacentCount":0
+		}
 	  }
 	}
 `)
