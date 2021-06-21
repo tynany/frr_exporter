@@ -19,7 +19,7 @@ var (
 	telemetryPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
 	frrVTYSHPath    = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
 	frrVTYSHTimeout = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commands (default 20s).").Default("20s").String()
-	frrVTYSHSudo	= kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands").Bool()
+	frrVTYSHSudo    = kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands.").Bool()
 
 	collectors = []*collector.Collector{}
 )

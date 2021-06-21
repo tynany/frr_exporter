@@ -38,6 +38,7 @@ Flags:
       --frr.vtysh.path="/usr/bin/vtysh"
                                  Path of vtysh.
       --frr.vtysh.timeout="20s"  The timeout when running vtysh commends (default 20s).
+      --frr.vtysh.sudo           Enable sudo when executing vtysh commands.      
       --collector.bgp            Collect BGP Metrics (default: enabled).
       --collector.ospf           Collect OSPF Metrics (default: enabled).
       --collector.bfd            Collect BFD Metrics (default: enabled).
