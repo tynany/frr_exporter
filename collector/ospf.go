@@ -1,10 +1,8 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -79,14 +77,8 @@ func (*OSPFCollector) CollectTotalErrors() float64 {
 
 func getOSPFInterface() ([]byte, error) {
 	args := []string{"-c", "show ip ospf vrf all interface json"}
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
 
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
+	return execVtyshCommand(args...)
 }
 
 func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte) error {

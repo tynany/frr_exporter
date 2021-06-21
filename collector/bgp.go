@@ -173,17 +173,6 @@ type vxLanStats struct {
 	TenantVrf      string
 }
 
-func execVtyshCommand(args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
-
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
-}
-
 func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum []byte) error {
 	var jsonMap map[string]vxLanStats
 	bgpL2vpnDesc := getBgpL2vpnDesc()

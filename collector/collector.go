@@ -24,6 +24,7 @@ var (
 	}
 	vtyshPath    string
 	vtyshTimeout time.Duration
+	vtyshSudo    bool
 )
 
 // CLIHelper is used to populate flags.
@@ -74,6 +75,11 @@ func (e *Exporters) SetVTYSHPath(path string) {
 // SetVTYSHTimeout sets the path of vtysh.
 func (e *Exporters) SetVTYSHTimeout(timeout time.Duration) {
 	vtyshTimeout = timeout
+}
+
+// SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.
+func (e *Exporters) SetVTYSHSudo(enable bool) {
+        vtyshSudo = enable
 }
 
 // Describe implemented as per the prometheus.Collector interface.
