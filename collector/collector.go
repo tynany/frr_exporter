@@ -78,8 +78,8 @@ func (e *Exporters) SetVTYSHTimeout(timeout time.Duration) {
 }
 
 // SetVTYSHPathspace sets the frr config path prefix (-N option for vtysh)
-func (e *Exporters) SetVTYSHPathspace(ns string) {
-	vtyshPathspace = &ns
+func (e *Exporters) SetVTYSHPathspace(s string) {
+	vtyshPathspace = &s
 }
 
 // SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.
