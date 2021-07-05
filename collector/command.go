@@ -12,13 +12,25 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
 	defer cancel()
 
+	var a []string
+	var executable string
+
 	if vtyshSudo == true {
-		a := []string{vtyshPath}
-		a = append(a, args...)
-		output, err = exec.CommandContext(ctx, "/usr/bin/sudo", a...).Output()
+		a = []string{vtyshPath}
+		executable = "/usr/bin/sudo"
 	} else {
-		output, err = exec.CommandContext(ctx, vtyshPath, args...).Output()
+		a = []string{}
+		executable = vtyshPath
 	}
+
+	if vtyshPathspace != nil {
+		n_opt := []string{"-N", *vtyshPathspace}
+		a = append(a, n_opt...)
+	}
+
+	a = append(a, args...)
+
+	output, err = exec.CommandContext(ctx, executable, a...).Output()
 
 	if err != nil {
 		return nil, err
