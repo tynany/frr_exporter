@@ -21,9 +21,9 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
-	vtyshPath    string
-	vtyshTimeout time.Duration
-	vtyshSudo    bool
+	vtyshPath      string
+	vtyshTimeout   time.Duration
+	vtyshSudo      bool
 	vtyshPathspace *string
 )
 
@@ -84,7 +84,7 @@ func (e *Exporters) SetVTYSHPathspace(ns string) {
 
 // SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.
 func (e *Exporters) SetVTYSHSudo(enable bool) {
-        vtyshSudo = enable
+	vtyshSudo = enable
 }
 
 // Describe implemented as per the prometheus.Collector interface.

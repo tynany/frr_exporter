@@ -15,12 +15,12 @@ import (
 )
 
 var (
-	listenAddress   = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
-	telemetryPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-	frrVTYSHPath    = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
-	frrVTYSHPathspace    = kingpin.Flag("frr.vtysh.pathspace", "Config prefix to be passed to vtysh (-N)").String()
-	frrVTYSHTimeout = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commands (default 20s).").Default("20s").String()
-	frrVTYSHSudo    = kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands.").Bool()
+	listenAddress     = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
+	telemetryPath     = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+	frrVTYSHPath      = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
+	frrVTYSHPathspace = kingpin.Flag("frr.vtysh.pathspace", "Config prefix to be passed to vtysh (-N)").String()
+	frrVTYSHTimeout   = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commands (default 20s).").Default("20s").String()
+	frrVTYSHSudo      = kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands.").Bool()
 
 	collectors = []*collector.Collector{}
 )
