@@ -22,28 +22,29 @@ Flags:
       --collector.bgp.peer-types
                                  Enable the frr_bgp_peer_types_up metric (default: disabled).
       --collector.bgp.peer-types.keys=type ...
-                                 Select the keys from the JSON formatted BGP description of which the values will be used with the frr_bgp_peer_types_up metric.
-                                 Supports multiple values (default: type).
+                                 Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up
+                                 metric. Supports multiple values (default: type).
       --collector.bgp.peer-descriptions
-                                 Add the value of the desc key from a JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
+                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
       --collector.bgp.peer-descriptions.plain-text
                                  Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
       --collector.bgp.advertised-prefixes
-                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent
-                                 field (default: disabled).
+                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer.
+                                 This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
       --web.listen-address=":9342"
                                  Address on which to expose metrics and web interface.
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
       --frr.vtysh.path="/usr/bin/vtysh"
                                  Path of vtysh.
-      --frr.vtysh.timeout="20s"  The timeout when running vtysh commends (default 20s).
-      --frr.vtysh.sudo           Enable sudo when executing vtysh commands.      
+      --frr.vtysh.pathspace=""   Config prefix to be passed to vtysh via the -N flag (optional).
+      --frr.vtysh.timeout="20s"  The timeout when running vtysh commands (default 20s).
+      --frr.vtysh.sudo           Enable sudo when executing vtysh commands.
       --collector.bgp            Collect BGP Metrics (default: enabled).
       --collector.ospf           Collect OSPF Metrics (default: enabled).
-      --collector.bfd            Collect BFD Metrics (default: enabled).
       --collector.bgp6           Collect BGP IPv6 Metrics (default: disabled).
       --collector.bgpl2vpn       Collect BGP L2VPN Metrics (default: disabled).
+      --collector.bfd            Collect BFD Metrics (default: enabled).
       --log.level="info"         Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
       --log.format="logger:stderr"
                                  Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"
