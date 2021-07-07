@@ -8,8 +8,7 @@ import (
 	"github.com/prometheus/common/log"
 )
 
-// The namespace used by all metrics.
-const namespace = "frr"
+const metric_namespace = "frr"
 
 var (
 	frrTotalScrapeCount = 0.0
@@ -22,9 +21,10 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
-	vtyshPath    string
-	vtyshTimeout time.Duration
-	vtyshSudo    bool
+	vtyshPath      string
+	vtyshTimeout   time.Duration
+	vtyshSudo      bool
+	vtyshPathspace *string
 )
 
 // CLIHelper is used to populate flags.
@@ -77,9 +77,14 @@ func (e *Exporters) SetVTYSHTimeout(timeout time.Duration) {
 	vtyshTimeout = timeout
 }
 
+// SetVTYSHPathspace sets the frr config path prefix (-N option for vtysh)
+func (e *Exporters) SetVTYSHPathspace(s string) {
+	vtyshPathspace = &s
+}
+
 // SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.
 func (e *Exporters) SetVTYSHSudo(enable bool) {
-        vtyshSudo = enable
+	vtyshSudo = enable
 }
 
 // Describe implemented as per the prometheus.Collector interface.
@@ -150,11 +155,11 @@ func runCollector(ch chan<- prometheus.Metric, errCh chan<- int, collector *Coll
 }
 
 func promDesc(metricName string, metricDescription string, labels []string) *prometheus.Desc {
-	return prometheus.NewDesc(namespace+"_"+metricName, metricDescription, labels, nil)
+	return prometheus.NewDesc(metric_namespace+"_"+metricName, metricDescription, labels, nil)
 }
 
 func colPromDesc(subsystem string, metricName string, metricDescription string, labels []string) *prometheus.Desc {
-	return prometheus.NewDesc(prometheus.BuildFQName(namespace, subsystem, metricName), metricDescription, labels, nil)
+	return prometheus.NewDesc(prometheus.BuildFQName(metric_namespace, subsystem, metricName), metricDescription, labels, nil)
 }
 
 func newGauge(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
