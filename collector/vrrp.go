@@ -11,8 +11,8 @@ import (
 
 const (
 	vrrpStatusInitialize string = "Initialize"
-	vrrpStatusBackup              = "Backup"
-	vrrpStatusMaster              = "Master"
+	vrrpStatusBackup            = "Backup"
+	vrrpStatusMaster            = "Master"
 )
 
 var (
