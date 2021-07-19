@@ -100,12 +100,12 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 	vrrpStateLabels := append(vrrpLabels, "state")
 
 	vrrpDesc = map[string]*prometheus.Desc{
-		"vrrpState":       colPromDesc(vrrpSubsystem, "vrrp_state", "Status of the VRRP state machine.", vrrpStateLabels),
-		"adverTx":         colPromDesc(vrrpSubsystem, "vrrp_adverTx_total", "Advertisements sent total.", vrrpLabels),
-		"adverRx":         colPromDesc(vrrpSubsystem, "vrrp_adverRx_total", "Advertisements received total.", vrrpLabels),
-		"garpTx":          colPromDesc(vrrpSubsystem, "vrrp_garpTx_total", "Gratuitous ARP sent total.", vrrpLabels),
-		"neighborAdverTx": colPromDesc(vrrpSubsystem, "vrrp_neighborAdverTx_total", "Neighbor Advertisements sent total.", vrrpLabels),
-		"transitions":     colPromDesc(vrrpSubsystem, "vrrp_state_transitions_total", "Number of transitions of the VRRP state machine in total.", vrrpLabels),
+		"vrrpState":       colPromDesc(vrrpSubsystem, "state", "Status of the VRRP state machine.", vrrpStateLabels),
+		"adverTx":         colPromDesc(vrrpSubsystem, "adverTx_total", "Advertisements sent total.", vrrpLabels),
+		"adverRx":         colPromDesc(vrrpSubsystem, "adverRx_total", "Advertisements received total.", vrrpLabels),
+		"garpTx":          colPromDesc(vrrpSubsystem, "garpTx_total", "Gratuitous ARP sent total.", vrrpLabels),
+		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighborAdverTx_total", "Neighbor Advertisements sent total.", vrrpLabels),
+		"transitions":     colPromDesc(vrrpSubsystem, "state_transitions_total", "Number of transitions of the VRRP state machine in total.", vrrpLabels),
 	}
 
 	return vrrpDesc
