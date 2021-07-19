@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	vrrpStatusInitializing string = "Initialize"
+	vrrpStatusInitialize string = "Initialize"
 	vrrpStatusBackup              = "Backup"
 	vrrpStatusMaster              = "Master"
 )
@@ -22,7 +22,7 @@ var (
 	vrrpErrors      = []error{}
 	totalVRRPErrors = 0.0
 
-	vrrpStates = []string{vrrpStatusInitializing, vrrpStatusMaster, vrrpStatusBackup}
+	vrrpStates = []string{vrrpStatusInitialize, vrrpStatusMaster, vrrpStatusBackup}
 )
 
 type VrrpVrInfo struct {
