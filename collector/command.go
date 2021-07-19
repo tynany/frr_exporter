@@ -23,8 +23,8 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 		executable = vtyshPath
 	}
 
-	if *vtyshPathspace != "" {
-		n_opt := []string{"-N", *vtyshPathspace}
+	if vtyshPathspace != "" {
+		n_opt := []string{"-N", vtyshPathspace}
 		a = append(a, n_opt...)
 	}
 
