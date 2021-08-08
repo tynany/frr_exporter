@@ -61,6 +61,13 @@ func initCollectors() {
 		Errors:        bfd,
 		CLIHelper:     bfd,
 	})
+	vrrp := collector.NewVRRPCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          vrrp.Name(),
+		PromCollector: vrrp,
+		Errors:        vrrp,
+		CLIHelper:     vrrp,
+	})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
