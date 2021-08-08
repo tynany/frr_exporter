@@ -24,7 +24,7 @@ var (
 	vtyshPath      string
 	vtyshTimeout   time.Duration
 	vtyshSudo      bool
-	vtyshPathspace *string
+	vtyshPathspace string
 )
 
 // CLIHelper is used to populate flags.
@@ -79,7 +79,7 @@ func (e *Exporters) SetVTYSHTimeout(timeout time.Duration) {
 
 // SetVTYSHPathspace sets the frr config path prefix (-N option for vtysh)
 func (e *Exporters) SetVTYSHPathspace(s string) {
-	vtyshPathspace = &s
+	vtyshPathspace = s
 }
 
 // SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.
