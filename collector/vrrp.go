@@ -112,6 +112,7 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 }
 
 func collectVRRP(ch chan<- prometheus.Metric) {
+	vrrpErrors = []error{}
 	jsonVRRPInfo, err := getVRRPInfo()
 	if err != nil {
 		totalVRRPErrors++

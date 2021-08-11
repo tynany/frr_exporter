@@ -68,6 +68,7 @@ func (*BGPCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *BGPCollector) Collect(ch chan<- prometheus.Metric) {
+	bgpErrors = []error{}
 	collectBGP(ch, "ipv4")
 }
 
@@ -113,6 +114,7 @@ func (*BGP6Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *BGP6Collector) Collect(ch chan<- prometheus.Metric) {
+	bgp6Errors = []error{}
 	collectBGP(ch, "ipv6")
 }
 
@@ -196,6 +198,7 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 
 // Collect implemented as per the prometheus.Collector interface.
 func (c *BGPL2VPNCollector) Collect(ch chan<- prometheus.Metric) {
+	bgpL2VPNErrors = []error{}
 	collectBGP(ch, "l2vpn")
 
 	jsonBGPL2vpnEvpnSum, err := getBgpL2vpnEvpnSummary()
