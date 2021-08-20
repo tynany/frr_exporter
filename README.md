@@ -67,7 +67,7 @@ scrape_configs:
 ```
 
 ## Docker
-A Docker container is available at [tynany/frr_exporter](https://hub.docker.com/r/tynany/junos_exporter).
+A Docker container is available at [tynany/frr_exporter](https://hub.docker.com/r/tynany/frr_exporter).
 
 ### Example
 Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the frr_exporter option `--frr.vtysh.options`:
