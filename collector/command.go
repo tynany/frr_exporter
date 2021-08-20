@@ -1,13 +1,15 @@
 package collector
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"os/exec"
+	"strings"
 )
 
 func execVtyshCommand(args ...string) ([]byte, error) {
 	var err error
-	var output []byte
 
 	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
 	defer cancel()
@@ -15,7 +17,7 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 	var a []string
 	var executable string
 
-	if vtyshSudo == true {
+	if vtyshSudo {
 		a = []string{vtyshPath}
 		executable = "/usr/bin/sudo"
 	} else {
@@ -23,18 +25,23 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 		executable = vtyshPath
 	}
 
-	if vtyshPathspace != "" {
-		n_opt := []string{"-N", vtyshPathspace}
-		a = append(a, n_opt...)
+	if frrVTYSHOptions != "" {
+		frrOptions := strings.Split(frrVTYSHOptions, " ")
+		a = append(a, frrOptions...)
 	}
 
 	a = append(a, args...)
 
-	output, err = exec.CommandContext(ctx, executable, a...).Output()
+	cmd := exec.CommandContext(ctx, executable, a...)
 
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", err, strings.Replace(stderr.String(), "\n", " ", -1))
 	}
 
-	return output, nil
+	return stdout.Bytes(), nil
 }

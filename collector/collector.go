@@ -21,10 +21,10 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
-	vtyshPath      string
-	vtyshTimeout   time.Duration
-	vtyshSudo      bool
-	vtyshPathspace string
+	vtyshPath       string
+	vtyshTimeout    time.Duration
+	vtyshSudo       bool
+	frrVTYSHOptions string
 )
 
 // CLIHelper is used to populate flags.
@@ -77,9 +77,9 @@ func (e *Exporters) SetVTYSHTimeout(timeout time.Duration) {
 	vtyshTimeout = timeout
 }
 
-// SetVTYSHPathspace sets the frr config path prefix (-N option for vtysh)
-func (e *Exporters) SetVTYSHPathspace(s string) {
-	vtyshPathspace = s
+// SetVTYSHOptions sets the options passed to vtysh
+func (e *Exporters) SetVTYSHOptions(s string) {
+	frrVTYSHOptions = s
 }
 
 // SetVTYSHSudo sets the first command to execute vtysh if sudo is enabled.

@@ -37,7 +37,7 @@ Flags:
                                  Path under which to expose metrics.
       --frr.vtysh.path="/usr/bin/vtysh"
                                  Path of vtysh.
-      --frr.vtysh.pathspace=""   Config prefix to be passed to vtysh via the -N flag (optional).
+      --frr.vtysh.options=""     Additional options passed to vtysh.
       --frr.vtysh.timeout="20s"  The timeout when running vtysh commands (default: 20s).
       --frr.vtysh.sudo           Enable sudo when executing vtysh commands.
       --collector.bgp            Collect BGP Metrics (default: enabled).
@@ -65,6 +65,16 @@ scrape_configs:
         regex: "(.*):\d+"
         target: instance
 ```
+
+## Docker
+A Docker container is available via `tynany/frr_exporter`.
+
+### Example
+Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the frr_exporter option `--frr.vtysh.options`:
+```
+docker run --restart unless-stopped -d -p 9342:9342 -v /etc/frr:/frr_config -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.vtysh.options=--vty_socket=/frr_sockets --config_dir=/frr_config"
+```
+
 
 ## Collectors
 To disable a default collector, use the `--no-collector.$name` flag, or
