@@ -1,10 +1,8 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -79,15 +77,7 @@ func (*BFDCollector) CollectTotalErrors() float64 {
 }
 
 func getBFDInterface() ([]byte, error) {
-	args := []string{"-c", "show bfd peers json"}
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
-
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
+	return execVtyshCommand("-c", "show bfd peers json")
 }
 
 func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte) error {

@@ -1,5 +1,5 @@
 go:
-    # Whenever the Go version is updated here, .circle/config.yml should also be updated.
+    # Whenever the Go version is updated here, .circle/config.yml and Dockerfile should also be updated.
     version: 1.17
 repository:
     path: github.com/tynany/frr_exporter

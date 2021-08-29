@@ -1,10 +1,8 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -429,17 +427,14 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 	errors := []error{}
 	totalErrors := 0.0
 
-	var args []string
+	var cmd string
 	if strings.ToLower(vrfName) == "default" {
-		args = []string{"-c", fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)}
+		cmd = fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)
 	} else {
-		args = []string{"-c", fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)}
+		cmd = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
-
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
+	output, err := execVtyshCommand("-c", cmd)
 	if err != nil {
 		totalErrors++
 		errors = append(errors, err)
@@ -505,14 +500,10 @@ type bgpAdvertisedRoutes struct {
 //  - Plain text description of peers
 //  - Error
 func getBGPPeerDesc() (map[string]map[string]string, map[string]string, error) {
-	args := []string{"-c", "show run bgpd"}
 	descJSON := make(map[string]map[string]string)
 	descText := make(map[string]string)
 
-	ctx, cancel := context.WithTimeout(context.Background(), vtyshTimeout)
-	defer cancel()
-
-	output, err := exec.CommandContext(ctx, vtyshPath, args...).Output()
+	output, err := execVtyshCommand("-c", "show run bgpd")
 	if err != nil {
 		return nil, nil, err
 	}
