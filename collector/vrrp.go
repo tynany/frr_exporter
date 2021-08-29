@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	vrrpStatusInitialize string = "Initialize"
-	vrrpStatusBackup            = "Backup"
-	vrrpStatusMaster            = "Master"
+	vrrpStatusInitialize = "Initialize"
+	vrrpStatusBackup     = "Backup"
+	vrrpStatusMaster     = "Master"
 )
 
 var (

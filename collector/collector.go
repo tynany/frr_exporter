@@ -4,15 +4,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 const metric_namespace = "frr"
 
 var (
 	frrTotalScrapeCount = 0.0
-	frrTotalErrorCount  = 0
 	frrLabels           = []string{"collector"}
 	frrDesc             = map[string]*prometheus.Desc{
 		"frrScrapesTotal":   promDesc("scrapes_total", "Total number of times FRR has been scraped.", nil),
@@ -60,6 +61,7 @@ type Collector struct {
 	PromCollector prometheus.Collector
 	Errors        CollectErrors
 	CLIHelper     CLIHelper
+	Logger        log.Logger
 }
 
 // NewExporter returns an Exporters type containing a slice of Collectors.
@@ -146,7 +148,7 @@ func runCollector(ch chan<- prometheus.Metric, errCh chan<- int, collector *Coll
 		errCh <- 1
 		ch <- prometheus.MustNewConstMetric(frrDesc["frrCollectorUp"], prometheus.GaugeValue, 0, collector.Name)
 		for _, err := range errors {
-			log.Errorf("collector \"%s\" scrape failed: %s", collector.Name, err)
+			level.Error(collector.Logger).Log("msg", "Scrape failed", "collector", collector.Name, "err", err)
 		}
 	} else {
 		ch <- prometheus.MustNewConstMetric(frrDesc["frrCollectorUp"], prometheus.GaugeValue, 1, collector.Name)

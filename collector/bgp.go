@@ -429,7 +429,7 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 	errors := []error{}
 	totalErrors := 0.0
 
-	args := []string{}
+	var args []string
 	if strings.ToLower(vrfName) == "default" {
 		args = []string{"-c", fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)}
 	} else {
