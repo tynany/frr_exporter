@@ -18,8 +18,12 @@ jobs:
       # Whenever the Go version is updated here, .promu.yml, Dockerfile and line 6 of this file should also be updated.
       - image: circleci/golang:1.17
     steps:
+      - checkout
       - setup_remote_docker
-      - run: ./promu release .tarballs
+      - run: make setup_promu
+      - run: ./promu crossbuild
+      - run: ./promu crossbuild tarballs
+      - run: ./promu checksum .tarballs
 workflows:
   version: 2
   build_and_release:
@@ -31,5 +35,3 @@ workflows:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
-          requires:
-            - build 
