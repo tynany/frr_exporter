@@ -24,6 +24,7 @@ jobs:
       - run: ./promu crossbuild
       - run: ./promu crossbuild tarballs
       - run: ./promu checksum .tarballs
+      - run: ./promu release .tarballs
 workflows:
   version: 2
   build_and_release:
