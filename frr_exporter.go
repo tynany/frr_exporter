@@ -82,6 +82,13 @@ func initCollectors(logger log.Logger) {
 		CLIHelper:     vrrp,
 		Logger:        logger,
 	})
+	pim := collector.NewPIMCollector()
+	collectors = append(collectors, &collector.Collector{
+		Name:          pim.Name(),
+		PromCollector: pim,
+		Errors:        pim,
+		CLIHelper:     pim,
+	})
 }
 
 func handler(logger log.Logger) http.Handler {
