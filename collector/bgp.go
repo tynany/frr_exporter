@@ -510,13 +510,17 @@ func getBGPPeerDesc() (map[string]map[string]string, map[string]string, error) {
 	r := regexp.MustCompile(`.*neighbor (.*) description (.*)\n`)
 	matches := r.FindAllStringSubmatch(string(output), -1)
 	for _, match := range matches {
-		var peerDesc map[string]string
-		if err := json.Unmarshal([]byte(match[2]), &peerDesc); err != nil {
-			// Don't return an error if scraping fails as description unmarshalling is best effort.
-			bgpErrors = append(bgpErrors, fmt.Errorf("cannot unmarshall bgp description %s for peer %s : %s", match[2], match[1], err))
+		if *bgpPeerDescsText {
+			descText[match[1]] = match[2]
+		} else {
+			var peerDesc map[string]string
+			if err := json.Unmarshal([]byte(match[2]), &peerDesc); err != nil {
+				// Don't return an error if scraping fails as description unmarshalling is best effort.
+				bgpErrors = append(bgpErrors, fmt.Errorf("cannot unmarshall bgp description %s for peer %s : %s", match[2], match[1], err))
+			}
+			descJSON[match[1]] = peerDesc
+			descText[match[1]] = match[2]
 		}
-		descJSON[match[1]] = peerDesc
-		descText[match[1]] = match[2]
 	}
 	return descJSON, descText, nil
 }
