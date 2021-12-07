@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -16,63 +17,32 @@ var (
 		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors detected.", ospfIfaceLabels),
 		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", ospfIfaceLabels),
 	}
-	ospfErrors      = []error{}
-	totalOSPFErrors = 0.0
 )
 
-// OSPFCollector collects OSPF metrics, implemented as per prometheus.Collector interface.
-type OSPFCollector struct{}
-
-// NewOSPFCollector returns a OSPFCollector struct.
-func NewOSPFCollector() *OSPFCollector {
-	return &OSPFCollector{}
+func init() {
+	registerCollector(ospfSubsystem, enabledByDefault, NewOSPFCollector)
 }
 
-// Name of the collector. Used to populate flag name.
-func (*OSPFCollector) Name() string {
-	return ospfSubsystem
+type ospfCollector struct {
+	logger log.Logger
 }
 
-// Help describes the metrics this collector scrapes. Used to populate flag help.
-func (*OSPFCollector) Help() string {
-	return "Collect OSPF Metrics"
+// NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
+func NewOSPFCollector(logger log.Logger) (Collector, error) {
+	return &ospfCollector{logger: logger}, nil
 }
 
-// EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
-func (*OSPFCollector) EnabledByDefault() bool {
-	return true
-}
-
-// Describe implemented as per the prometheus.Collector interface.
-func (*OSPFCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range ospfDesc {
-		ch <- desc
-	}
-}
-
-// Collect implemented as per the prometheus.Collector interface.
-func (c *OSPFCollector) Collect(ch chan<- prometheus.Metric) {
-	ospfErrors = []error{}
+// Update implemented as per the Collector interface.
+func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonOSPFInterface, err := getOSPFInterface()
 	if err != nil {
-		totalOSPFErrors++
-		ospfErrors = append(ospfErrors, fmt.Errorf("cannot get ospf interface summary: %s", err))
+		return fmt.Errorf("cannot get ospf interface summary: %s", err)
 	} else {
 		if err = processOSPFInterface(ch, jsonOSPFInterface); err != nil {
-			totalOSPFErrors++
-			ospfErrors = append(ospfErrors, fmt.Errorf("%s", err))
+			return err
 		}
 	}
-}
-
-// CollectErrors returns what errors have been gathered.
-func (*OSPFCollector) CollectErrors() []error {
-	return ospfErrors
-}
-
-// CollectTotalErrors returns total errors.
-func (*OSPFCollector) CollectTotalErrors() float64 {
-	return totalOSPFErrors
+	return nil
 }
 
 func getOSPFInterface() ([]byte, error) {

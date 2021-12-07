@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -12,86 +14,40 @@ var (
 	pimSubsystem            = "pim"
 	pimNeighborMetrixPrefix = "pim_neighbor"
 
-	pimDesc map[string]*prometheus.Desc
+	pimLabels = []string{"vrf"}
 
-	pimErrors      = []error{}
-	totalPIMErrors = 0.0
+	pimNeighborLabels = append(pimLabels, "neighbor", "iface")
+	pimDesc           = map[string]*prometheus.Desc{
+		"neighborCount": colPromDesc(pimSubsystem, "neighbors_count_total", "Number of neighbors detected", pimLabels),
+		"upTime":        colPromDesc(pimNeighborMetrixPrefix, "uptime_seconds", "How long has the peer ben up.", pimNeighborLabels),
+	}
 )
 
-// PIMCollector collects PIM metrics, implemented per prometheus.Collector interface.
-type PIMCollector struct{}
-
-// NewPIMCollector returns an empty PIMCollector struct.
-func NewPIMCollector() *PIMCollector {
-	return &PIMCollector{}
+func init() {
+	registerCollector(pimSubsystem, disabledByDefault, NewPIMCollector)
 }
 
-// Name of the collector.  Used to popuplate flag name.
-func (*PIMCollector) Name() string {
-	return pimSubsystem
+type pimCollector struct {
+	logger log.Logger
 }
 
-// Help describes the metrics
-func (*PIMCollector) Help() string {
-	return "Collect PIM metrics"
+// NewPIMCollector collects PIM metrics, implemented as per the Collector interface.
+func NewPIMCollector(logger log.Logger) (Collector, error) {
+	return &pimCollector{logger: logger}, nil
 }
 
-// EnabledByDefault describes whether this collector is enabled by default.  Used to populate flag default
-func (*PIMCollector) EnabledByDefault() bool {
-	return false
-}
+// Collect implemented as per the Collector interface
+func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 
-// Describe implemented as per the prometheus.Collector interface
-func (*PIMCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range getPimDesc() {
-		ch <- desc
-	}
-}
-
-// Collect implemented as per the prometheus.Collector interface
-func (*PIMCollector) Collect(ch chan<- prometheus.Metric) {
-	pimErrors = []error{}
-	collectPIM(ch)
-}
-
-// CollectErrors returns what errors have been gathered.
-func (*PIMCollector) CollectErrors() []error {
-	return pimErrors
-}
-
-// CollectTotalErrors returns total errors.
-func (*PIMCollector) CollectTotalErrors() float64 {
-	return totalPIMErrors
-}
-
-func getPimDesc() map[string]*prometheus.Desc {
-	if pimDesc != nil {
-		return pimDesc
-	}
-	pimLabels := []string{"vrf"}
-	pimInterfaceLabels := append(pimLabels, "iface")
-	pimNeighborLabels := append(pimInterfaceLabels, "neighbor")
-	pimDesc = map[string]*prometheus.Desc{
-		"neighborCount": colPromDesc(pimSubsystem, "neighbors_count_total", "Number of neighbors detected", pimLabels),
-
-		"upTime": colPromDesc(pimNeighborMetrixPrefix, "uptime_seconds", "How long has the peer ben up.", pimNeighborLabels),
-	}
-	return pimDesc
-}
-
-func collectPIM(ch chan<- prometheus.Metric) {
-	pimErrors = []error{}
-	totalPIMErrors = 0.0
 	jsonPIMNeighbors, err := getPIMNeighbors()
 	if err != nil {
-		totalPIMErrors++
-		pimErrors = append(pimErrors, fmt.Errorf("cannot get pim neighbors: %s", err))
+		return fmt.Errorf("cannot get pim neighbors: %s", err)
 	} else {
-		if err := processPIMNeighbors(ch, jsonPIMNeighbors); err != nil {
-			totalPIMErrors++
-			pimErrors = append(pimErrors, err)
+		if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 func getPIMNeighbors() ([]byte, error) {
@@ -100,9 +56,8 @@ func getPIMNeighbors() ([]byte, error) {
 	return execVtyshCommand(args...)
 }
 
-func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte) error {
+func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger log.Logger) error {
 	var jsonMap map[string]json.RawMessage
-	pimDesc := getPimDesc()
 	if err := json.Unmarshal(jsonPIMNeighbors, &jsonMap); err != nil {
 		return fmt.Errorf("cannot unmarshal pim neighbors json: %s", err)
 	}
@@ -120,8 +75,7 @@ func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte) e
 			for neighborIp, neighborData := range neighbors {
 				neighborCount++
 				if uptimeSec, err := parseHMS(neighborData.UpTime); err != nil {
-					totalPIMErrors++
-					pimErrors = append(pimErrors, fmt.Errorf("cannot parse neighbor uptime %s: %s", neighborData.UpTime, err))
+					level.Error(logger).Log("msg", "cannot parse neighbor uptime", "uptime", neighborData.UpTime, "err", err)
 				} else {
 					// The labels are "vrf", "iface", "neighbor"
 					neighborLabels := []string{strings.ToLower(vrfName), strings.ToLower(ifaceName), neighborIp}
