@@ -48,7 +48,7 @@ func getBGPDesc() map[string]*prometheus.Desc {
 
 	if *bgpPeerDescs {
 		bgpPeerLabels = append(bgpLabels, "peer", "peer_as", "peer_desc")
-}
+	}
 	bgpPeerMetricPrefix := "bgp_peer"
 
 	return map[string]*prometheus.Desc{
