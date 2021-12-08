@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	vtyshEnable     = kingpin.Flag("frr.vtysh", "Use vtysh to query FRR instead of each daemon's UNIX socket.").Default("false").Bool()
+	vtyshEnable     = kingpin.Flag("frr.vtysh", "Use vtysh to query FRR instead of each daemon's UNIX socket (default: disabled, recommended: disabled).").Default("false").Bool()
 	vtyshPath       = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
 	vtyshTimeout    = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commands (default: 20s).").Default("20s").Duration()
 	vtyshSudo       = kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands.").Bool()

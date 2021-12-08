@@ -18,38 +18,44 @@ To view available flags:
 usage: frr_exporter [<flags>]
 
 Flags:
-  -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
+  -h, --help                    Show context-sensitive help (also try --help-long and --help-man).
       --collector.bgp.peer-types
-                                 Enable the frr_bgp_peer_types_up metric (default: disabled).
+                                Enable the frr_bgp_peer_types_up metric (default: disabled).
       --collector.bgp.peer-types.keys=type ...
-                                 Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports multiple values (default:
-                                 type).
+                                Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports
+                                multiple values (default: type).
       --collector.bgp.peer-descriptions
-                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
+                                Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
       --collector.bgp.peer-descriptions.plain-text
-                                 Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
+                                Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
       --collector.bgp.advertised-prefixes
-                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of
-                                 FRR that don't have PfxSent field (default: disabled).
-      --web.listen-address=":9342"
-                                 Address on which to expose metrics and web interface.
-      --web.telemetry-path="/metrics"
-                                 Path under which to expose metrics.
+                                Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an
+                                option for older versions of FRR that don't have PfxSent field (default: disabled).
+      --frr.socket.dir-path="/var/run/frr"
+                                Path of of the localstatedir containing each daemon's UNIX socket.
+      --frr.socket.timeout=20s  Timeout when connecting to the FRR daemon UNIX sockets
+      --frr.vtysh               Use vtysh to query FRR instead of each daemon's UNIX socket (default: disabled, recommended: disabled).
       --frr.vtysh.path="/usr/bin/vtysh"
-                                 Path of vtysh.
-      --frr.vtysh.options=""     Additional options passed to vtysh.
-      --frr.vtysh.timeout="20s"  The timeout when running vtysh commands (default: 20s).
-      --frr.vtysh.sudo           Enable sudo when executing vtysh commands.
-      --collector.bgp            Collect BGP Metrics (default: enabled).
-      --collector.ospf           Collect OSPF Metrics (default: enabled).
-      --collector.bgp6           Collect BGP IPv6 Metrics (default: disabled).
-      --collector.bgpl2vpn       Collect BGP L2VPN Metrics (default: disabled).
-      --collector.bfd            Collect BFD Metrics (default: enabled).
-      --collector.vrrp           Collect VRRP Metrics (default: disabled).
-      --log.level="info"         Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
-      --log.format="logger:stderr"
-                                 Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"
-      --version                  Show application version.
+                                Path of vtysh.
+      --frr.vtysh.timeout=20s   The timeout when running vtysh commands (default: 20s).
+      --frr.vtysh.sudo          Enable sudo when executing vtysh commands.
+      --frr.vtysh.options=""    Additional options passed to vtysh.
+      --collector.bfd           Enable the bfd collector (default: enabled).
+      --collector.bgp           Enable the bgp collector (default: enabled).
+      --collector.bgp6          Enable the bgp6 collector (default: enabled).
+      --collector.bgpl2vpn      Enable the bgpl2vpn collector (default: enabled).
+      --collector.ospf          Enable the ospf collector (default: enabled).
+      --collector.pim           Enable the pim collector (default: disabled).
+      --collector.vrrp          Enable the vrrp collector (default: disabled).
+      --web.listen-address=":9342"
+                                Address on which to expose metrics and web interface.
+      --web.telemetry-path="/metrics"
+                                Path under which to expose metrics.
+      --web.config=""           [EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.
+      --log.level=info          Only log messages with the given severity or above. One of: [debug, info, warn, error]
+      --log.format=logfmt       Output format of log messages. One of: [logfmt, json]
+      --version                 Show application version.
+
 ```
 
 Promethues configuraiton:
@@ -70,11 +76,16 @@ scrape_configs:
 A Docker container is available at [tynany/frr_exporter](https://hub.docker.com/r/tynany/frr_exporter).
 
 ### Example
-Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the frr_exporter option `--frr.vtysh.options`:
+Mount the FRR socket directory (default `/var/run/frr`) inside the container, passing that directory to FRR exporter via the `--frr.socket.dir-path` flag:
 ```
-docker run --restart unless-stopped -d -p 9342:9342 -v /etc/frr:/frr_config -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.vtysh.options=--vty_socket=/frr_sockets --config_dir=/frr_config"
+docker run --restart unless-stopped -d -p 9342:9342 -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.socket.dir-path=/frr_sockets"
 ```
 
+#### If using the --frr.vtysh flag (not recommended)
+Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the frr_exporter option `--frr.vtysh.options` if using :
+```
+docker run --restart unless-stopped -d -p 9342:9342 -v /etc/frr:/frr_config -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.vtysh --frr.vtysh.options=--vty_socket=/frr_sockets --config_dir=/frr_config"
+```
 
 ## Collectors
 To disable a default collector, use the `--no-collector.$name` flag, or
@@ -93,9 +104,13 @@ Name | Description
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime 
 VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - VRRP Status<br> - VRRP State Transitions<br>
+PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
 
-### VTYSH
-The vtysh command is heavily utilised to extract metrics from FRR. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
+### Sending commands to FRR
+By default, FRR exporter sends commands to FRR via the UNIX sockets exposed by each FRR daemon (e.g. bgpd, ospfd, etc), usually located in `/var/run/frr`. If the sockets are located in a folder other than `/var/run/frr`, pass that directory to FRR exporter via the `--frr.socket.dir-path` flag.
+
+#### VTYSH
+If desired, FRR exporter can interface with FRR via the `vtysh` command by passing the `-frr.vtysh` flag to FRR exporter. This is not recommended, and is far slower than FRR exporter's default way of sending commands to FRR via UNIX sockets. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
 
 ### BGP: Peer Description Labels
 The description of a BGP peer can be added as a label to all peer metrics by passing the `--collector.bgp.peer-descriptions` flag. The peer description must be JSON formatted with a `desc` field. Example configuration:
