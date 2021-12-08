@@ -20,12 +20,13 @@ const (
 )
 
 var (
-	frrTotalScrapeCount    = 0.0
-	frrTotalScrapeCountMtx = sync.Mutex{}
-	frrLabels              = []string{"collector"}
-	frrDesc                = map[string]*prometheus.Desc{
-		"frrScrapesTotal":   promDesc("scrapes_total", "Total number of times FRR has been scraped.", nil),
-		"frrScrapeErrTotal": promDesc("scrape_errors_total", "Total number of errors from a collector.", frrLabels),
+	frrTotalScrapeCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: metric_namespace,
+		Name:      "scrapes_total",
+		Help:      "Total number of times FRR has been scraped.",
+	})
+	frrLabels = []string{"collector"}
+	frrDesc   = map[string]*prometheus.Desc{
 		"frrScrapeDuration": promDesc("scrape_duration_seconds", "Time it took for a collector's scrape to complete.", frrLabels),
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
@@ -89,10 +90,8 @@ func NewExporter(logger log.Logger) (*Exporter, error) {
 
 // Collect implemented as per the prometheus.Collector interface.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	frrTotalScrapeCountMtx.Lock()
-	frrTotalScrapeCount++
-	frrTotalScrapeCountMtx.Unlock()
-	ch <- prometheus.MustNewConstMetric(frrDesc["frrScrapesTotal"], prometheus.CounterValue, frrTotalScrapeCount)
+	frrTotalScrapeCount.Inc()
+	ch <- frrTotalScrapeCount
 
 	wg := &sync.WaitGroup{}
 	wg.Add(len(e.Collectors))

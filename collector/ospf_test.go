@@ -172,7 +172,7 @@ var (
 
 func TestProcessOSPFInterface(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processOSPFInterface(ch, ospfInterfaceSum); err != nil {
+	if err := processOSPFInterface(ch, ospfInterfaceSum, getOSPFDesc()); err != nil {
 		t.Errorf("error calling processOSPFInterface ipv4unicast: %s", err)
 	}
 	close(ch)

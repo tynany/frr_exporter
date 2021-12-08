@@ -11,12 +11,6 @@ import (
 
 var (
 	ospfSubsystem = "ospf"
-
-	ospfIfaceLabels = []string{"vrf", "iface", "area"}
-	ospfDesc        = map[string]*prometheus.Desc{
-		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors detected.", ospfIfaceLabels),
-		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", ospfIfaceLabels),
-	}
 )
 
 func init() {
@@ -24,12 +18,21 @@ func init() {
 }
 
 type ospfCollector struct {
-	logger log.Logger
+	logger       log.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
 // NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
 func NewOSPFCollector(logger log.Logger) (Collector, error) {
-	return &ospfCollector{logger: logger}, nil
+	return &ospfCollector{logger: logger, descriptions: getOSPFDesc()}, nil
+}
+
+func getOSPFDesc() map[string]*prometheus.Desc {
+	labels := []string{"vrf", "iface", "area"}
+	return map[string]*prometheus.Desc{
+		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors detected.", labels),
+		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", labels),
+	}
 }
 
 // Update implemented as per the Collector interface.
@@ -38,7 +41,7 @@ func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return fmt.Errorf("cannot get ospf interface summary: %s", err)
 	} else {
-		if err = processOSPFInterface(ch, jsonOSPFInterface); err != nil {
+		if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions); err != nil {
 			return err
 		}
 	}
@@ -51,7 +54,7 @@ func getOSPFInterface() ([]byte, error) {
 	return execVtyshCommand(args...)
 }
 
-func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte) error {
+func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte, ospfDesc map[string]*prometheus.Desc) error {
 	// Unfortunately, the 'show ip ospf vrf all interface json' JSON  output is poorly structured. Instead
 	// of all interfaces being in a list, each interface is added as a key on the same level of vrfName and
 	// vrfId. As such, we have to loop through each key and apply logic to determine whether the key is an
@@ -84,7 +87,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 					if !newIface.TimerPassiveIface {
 						// The labels are "vrf", "newIface", "area"
 						labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
-						ospfMetrics(ch, newIface, labels)
+						ospfMetrics(ch, newIface, labels, ospfDesc)
 					}
 				}
 			default:
@@ -96,7 +99,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 				if !iface.TimerPassiveIface {
 					// The labels are "vrf", "iface", "area"
 					labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
-					ospfMetrics(ch, iface, labels)
+					ospfMetrics(ch, iface, labels, ospfDesc)
 				}
 			}
 		}
@@ -104,7 +107,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte)
 	return nil
 }
 
-func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string) {
+func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, ospfDesc map[string]*prometheus.Desc) {
 	newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
 	newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
 }

@@ -20,18 +20,6 @@ var (
 	vrrpSubsystem = "vrrp"
 
 	vrrpStates = []string{vrrpStatusInitialize, vrrpStatusMaster, vrrpStatusBackup}
-
-	vrrpLabels      = []string{"proto", "vrid", "interface", "subinterface"}
-	vrrpStateLabels = append(vrrpLabels, "state")
-
-	vrrpDesc = map[string]*prometheus.Desc{
-		"vrrpState":       colPromDesc(vrrpSubsystem, "state", "Status of the VRRP state machine.", vrrpStateLabels),
-		"adverTx":         colPromDesc(vrrpSubsystem, "adverTx_total", "Advertisements sent total.", vrrpLabels),
-		"adverRx":         colPromDesc(vrrpSubsystem, "adverRx_total", "Advertisements received total.", vrrpLabels),
-		"garpTx":          colPromDesc(vrrpSubsystem, "garpTx_total", "Gratuitous ARP sent total.", vrrpLabels),
-		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighborAdverTx_total", "Neighbor Advertisements sent total.", vrrpLabels),
-		"transitions":     colPromDesc(vrrpSubsystem, "state_transitions_total", "Number of transitions of the VRRP state machine in total.", vrrpLabels),
-	}
 )
 
 func init() {
@@ -60,21 +48,36 @@ type VrrpInstanceStats struct {
 }
 
 type vrrpCollector struct {
-	logger log.Logger
+	logger       log.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
 // NewVRRPCollector collects VRRP metrics, implemented as per the Collector interface.
 func NewVRRPCollector(logger log.Logger) (Collector, error) {
-	return &vrrpCollector{logger: logger}, nil
+	return &vrrpCollector{logger: logger, descriptions: getVRRPDesc()}, nil
+}
+
+func getVRRPDesc() map[string]*prometheus.Desc {
+	labels := []string{"proto", "vrid", "interface", "subinterface"}
+	stateLabels := append(labels, "state")
+
+	return map[string]*prometheus.Desc{
+		"vrrpState":       colPromDesc(vrrpSubsystem, "state", "Status of the VRRP state machine.", stateLabels),
+		"adverTx":         colPromDesc(vrrpSubsystem, "adverTx_total", "Advertisements sent total.", labels),
+		"adverRx":         colPromDesc(vrrpSubsystem, "adverRx_total", "Advertisements received total.", labels),
+		"garpTx":          colPromDesc(vrrpSubsystem, "garpTx_total", "Gratuitous ARP sent total.", labels),
+		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighborAdverTx_total", "Neighbor Advertisements sent total.", labels),
+		"transitions":     colPromDesc(vrrpSubsystem, "state_transitions_total", "Number of transitions of the VRRP state machine in total.", labels),
+	}
 }
 
 // Update implemented as per the Collector interface.
 func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonVRRPInfo, err := getVRRPInfo()
 	if err != nil {
-		return fmt.Errorf("cannot get vrrp info: %s", err)
+		return fmt.Errorf("cannot get vrrp info: %w", err)
 	} else {
-		if err := processVRRPInfo(ch, jsonVRRPInfo); err != nil {
+		if err := processVRRPInfo(ch, jsonVRRPInfo, c.descriptions); err != nil {
 			return err
 		}
 	}
@@ -87,21 +90,21 @@ func getVRRPInfo() ([]byte, error) {
 	return execVtyshCommand(args...)
 }
 
-func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte) error {
+func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[string]*prometheus.Desc) error {
 	var jsonList []VrrpVrInfo
 	if err := json.Unmarshal(jsonVRRPInfo, &jsonList); err != nil {
 		return fmt.Errorf("cannot unmarshal vrrp json: %s", err)
 	}
 
 	for _, vrInfo := range jsonList {
-		processInstance(ch, "v4", vrInfo.Vrid, vrInfo.Interface, vrInfo.V4Info)
-		processInstance(ch, "v6", vrInfo.Vrid, vrInfo.Interface, vrInfo.V6Info)
+		processInstance(ch, "v4", vrInfo.Vrid, vrInfo.Interface, vrInfo.V4Info, desc)
+		processInstance(ch, "v6", vrInfo.Vrid, vrInfo.Interface, vrInfo.V6Info, desc)
 	}
 
 	return nil
 }
 
-func processInstance(ch chan<- prometheus.Metric, proto string, vrid int, iface string, instance VrrpInstanceInfo) {
+func processInstance(ch chan<- prometheus.Metric, proto string, vrid int, iface string, instance VrrpInstanceInfo, vrrpDesc map[string]*prometheus.Desc) {
 
 	vrrpLabels := []string{proto, strconv.Itoa(vrid), iface, instance.Subinterface}
 

@@ -72,7 +72,7 @@ var (
 
 func TestProcessPIMNeighbors(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processPIMNeighbors(ch, pimNeighborOutput, nil); err != nil {
+	if err := processPIMNeighbors(ch, pimNeighborOutput, nil, getPIMDesc()); err != nil {
 		t.Errorf("error calling processPIMNeighbors: %s", err)
 	}
 	close(ch)

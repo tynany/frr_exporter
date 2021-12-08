@@ -11,16 +11,7 @@ import (
 )
 
 var (
-	pimSubsystem            = "pim"
-	pimNeighborMetrixPrefix = "pim_neighbor"
-
-	pimLabels = []string{"vrf"}
-
-	pimNeighborLabels = append(pimLabels, "neighbor", "iface")
-	pimDesc           = map[string]*prometheus.Desc{
-		"neighborCount": colPromDesc(pimSubsystem, "neighbors_count_total", "Number of neighbors detected", pimLabels),
-		"upTime":        colPromDesc(pimNeighborMetrixPrefix, "uptime_seconds", "How long has the peer ben up.", pimNeighborLabels),
-	}
+	pimSubsystem = "pim"
 )
 
 func init() {
@@ -28,12 +19,22 @@ func init() {
 }
 
 type pimCollector struct {
-	logger log.Logger
+	logger       log.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
 // NewPIMCollector collects PIM metrics, implemented as per the Collector interface.
 func NewPIMCollector(logger log.Logger) (Collector, error) {
-	return &pimCollector{logger: logger}, nil
+	return &pimCollector{logger: logger, descriptions: getPIMDesc()}, nil
+}
+func getPIMDesc() map[string]*prometheus.Desc {
+	labels := []string{"vrf"}
+
+	neighborLabels := append(labels, "iface", "neighbor")
+	return map[string]*prometheus.Desc{
+		"neighborCount": colPromDesc(pimSubsystem, "neighbors_count_total", "Number of neighbors detected", labels),
+		"upTime":        colPromDesc(pimSubsystem+"_neighbor", "uptime_seconds", "How long has the peer been up.", neighborLabels),
+	}
 }
 
 // Collect implemented as per the Collector interface
@@ -43,7 +44,7 @@ func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return fmt.Errorf("cannot get pim neighbors: %s", err)
 	} else {
-		if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger); err != nil {
+		if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger, c.descriptions); err != nil {
 			return err
 		}
 	}
@@ -56,7 +57,7 @@ func getPIMNeighbors() ([]byte, error) {
 	return execVtyshCommand(args...)
 }
 
-func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger log.Logger) error {
+func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger log.Logger, pimDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]json.RawMessage
 	if err := json.Unmarshal(jsonPIMNeighbors, &jsonMap); err != nil {
 		return fmt.Errorf("cannot unmarshal pim neighbors json: %s", err)

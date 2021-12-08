@@ -10,14 +10,6 @@ import (
 
 var (
 	bfdSubsystem = "bfd"
-
-	bfdCountLabels = []string{}
-	bfdPeerLabels  = []string{"local", "peer"}
-	bfdDesc        = map[string]*prometheus.Desc{
-		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", bfdCountLabels),
-		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", bfdPeerLabels),
-		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer (1 = Up, 0 = Down).", bfdPeerLabels),
-	}
 )
 
 func init() {
@@ -25,12 +17,23 @@ func init() {
 }
 
 type bfdCollector struct {
-	logger log.Logger
+	logger       log.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
 // NewBFDCollector collects BFD metrics, implemented as per the Collector interface.
 func NewBFDCollector(logger log.Logger) (Collector, error) {
-	return &bfdCollector{logger: logger}, nil
+	return &bfdCollector{logger: logger, descriptions: getBFDDesc()}, nil
+}
+
+func getBFDDesc() map[string]*prometheus.Desc {
+	countLabels := []string{}
+	peerLabels := []string{"local", "peer"}
+	return map[string]*prometheus.Desc{
+		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", countLabels),
+		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", peerLabels),
+		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer (1 = Up, 0 = Down).", peerLabels),
+	}
 }
 
 // Update implemented as per the Collector interface.
@@ -39,7 +42,7 @@ func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return fmt.Errorf("cannot get bfd peers summary: %s", err)
 	} else {
-		if err = processBFDPeers(ch, jsonBFDInterface); err != nil {
+		if err = processBFDPeers(ch, jsonBFDInterface, c.descriptions); err != nil {
 			return err
 		}
 	}
@@ -50,7 +53,7 @@ func getBFDInterface() ([]byte, error) {
 	return execVtyshCommand("-c", "show bfd peers json")
 }
 
-func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte) error {
+func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte, bfdDesc map[string]*prometheus.Desc) error {
 	var bfdPeers []bfdPeer
 	if err := json.Unmarshal(jsonBFDInterface, &bfdPeers); err != nil {
 		return fmt.Errorf("cannot unmarshal bfd peers json: %s", err)

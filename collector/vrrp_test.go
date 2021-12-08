@@ -144,7 +144,7 @@ var (
 
 func TestProcessVRRPInfo(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processVRRPInfo(ch, vrrpJson); err != nil {
+	if err := processVRRPInfo(ch, vrrpJson, getVRRPDesc()); err != nil {
 		t.Errorf("error calling processVRRPInfo: %s", err)
 	}
 	close(ch)
