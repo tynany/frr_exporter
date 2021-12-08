@@ -48,7 +48,7 @@ func getBGPDesc() map[string]*prometheus.Desc {
 
 	if *bgpPeerDescs {
 		bgpPeerLabels = append(bgpLabels, "peer", "peer_as", "peer_desc")
-}
+	}
 	bgpPeerMetricPrefix := "bgp_peer"
 
 	return map[string]*prometheus.Desc{
@@ -76,7 +76,6 @@ func (c *bgpCollector) Update(ch chan<- prometheus.Metric) error {
 
 // NewBGP6Collector collects BGPv6 metrics, implemented as per the Collector interface.
 func NewBGP6Collector(logger log.Logger) (Collector, error) {
-
 	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv6"}, nil
 }
 
@@ -87,7 +86,6 @@ type bgpL2VPNCollector struct {
 
 // NewBGPL2VPNCollector collects BGP L2VPN metrics, implemented as per the Collector interface.
 func NewBGPL2VPNCollector(logger log.Logger) (Collector, error) {
-
 	return &bgpL2VPNCollector{logger: logger, descriptions: getBGPL2VPNDesc()}, nil
 }
 
@@ -176,7 +174,6 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 
 func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
 	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
-
 	return execVtyshCommand(args...)
 }
 
