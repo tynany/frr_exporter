@@ -56,9 +56,9 @@ var (
 		"frr_pim_neighbor_uptime_seconds{iface=eth2,neighbor=192.0.2.227,vrf=red}":    13543,
 		"frr_pim_neighbor_uptime_seconds{iface=eth1,neighbor=192.0.2.45,vrf=blue}":    13545,
 		"frr_pim_neighbor_uptime_seconds{iface=eth0,neighbor=192.0.2.99,vrf=default}": 2745,
-		"frr_pim_neighbors_count_total{vrf=red}":                                      1,
-		"frr_pim_neighbors_count_total{vrf=blue}":                                     1,
-		"frr_pim_neighbors_count_total{vrf=default}":                                  1,
+		"frr_pim_neighbor_count_total{vrf=red}":                                       1,
+		"frr_pim_neighbor_count_total{vrf=blue}":                                      1,
+		"frr_pim_neighbor_count_total{vrf=default}":                                   1,
 	}
 	parseHMStests = []struct {
 		in  string
