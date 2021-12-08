@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/tynany/gofrrsockets"
+	"github.com/tynany/frr_exporter/internal/frrsockets"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	socketConn          *gofrrsockets.Connection
+	socketConn          *frrsockets.Connection
 	frrTotalScrapeCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: metric_namespace,
 		Name:      "scrapes_total",
@@ -72,7 +72,7 @@ func NewExporter(logger log.Logger) (*Exporter, error) {
 	initiatedCollectorsMtx.Lock()
 	defer initiatedCollectorsMtx.Unlock()
 
-	socketConn = gofrrsockets.NewConnection(*socketDirPath, *socketTimeout)
+	socketConn = frrsockets.NewConnection(*socketDirPath, *socketTimeout)
 
 	for name, enabled := range collectorState {
 		if !*enabled {

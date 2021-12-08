@@ -13,7 +13,6 @@ require (
 	github.com/prometheus/common v0.30.0
 	github.com/prometheus/exporter-toolkit v0.6.1
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/tynany/gofrrsockets v1.0.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
