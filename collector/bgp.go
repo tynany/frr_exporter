@@ -341,7 +341,7 @@ func getBGPPeerDesc(logger log.Logger) (map[string]map[string]string, map[string
 	descJSON := make(map[string]map[string]string)
 	descText := make(map[string]string)
 
-	output, err := execVtyshCommand("-c", "show run bgpd")
+	output, err := execVtyshCommand("-c", "show bgp neighbors json")
 	if err != nil {
 		return nil, nil, err
 	}
