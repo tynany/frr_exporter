@@ -72,7 +72,7 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonVRRPInfo, err := getVRRPInfo()
+	jsonVRRPInfo, err := executeVRRPCommand("show vrrp json")
 	if err != nil {
 		return fmt.Errorf("cannot get vrrp info: %w", err)
 	} else {
@@ -81,11 +81,6 @@ func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-func getVRRPInfo() ([]byte, error) {
-	args := []string{"-c", "show vrrp json"}
-	return execVtyshCommand(args...)
 }
 
 func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[string]*prometheus.Desc) error {

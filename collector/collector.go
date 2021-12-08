@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/tynany/gofrrsockets"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,6 +21,7 @@ const (
 )
 
 var (
+	socketConn          *gofrrsockets.Connection
 	frrTotalScrapeCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: metric_namespace,
 		Name:      "scrapes_total",
@@ -31,6 +33,9 @@ var (
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
+
+	socketDirPath = kingpin.Flag("frr.socket.dir-path", "Path of of the localstatedir containing each daemon's UNIX socket.").Default("/var/run/frr").String()
+	socketTimeout = kingpin.Flag("frr.socket.timeout", "Timeout when connecting to the FRR daemon UNIX sockets").Default("20s").Duration()
 
 	factories              = make(map[string]func(logger log.Logger) (Collector, error))
 	initiatedCollectorsMtx = sync.Mutex{}
@@ -66,6 +71,8 @@ func NewExporter(logger log.Logger) (*Exporter, error) {
 
 	initiatedCollectorsMtx.Lock()
 	defer initiatedCollectorsMtx.Unlock()
+
+	socketConn = gofrrsockets.NewConnection(*socketDirPath, *socketTimeout)
 
 	for name, enabled := range collectorState {
 		if !*enabled {

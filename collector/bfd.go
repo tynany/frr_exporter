@@ -38,7 +38,7 @@ func getBFDDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonBFDInterface, err := getBFDInterface()
+	jsonBFDInterface, err := executeBFDCommand("show bfd peers json")
 	if err != nil {
 		return fmt.Errorf("cannot get bfd peers summary: %s", err)
 	} else {
@@ -47,10 +47,6 @@ func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-func getBFDInterface() ([]byte, error) {
-	return execVtyshCommand("-c", "show bfd peers json")
 }
 
 func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte, bfdDesc map[string]*prometheus.Desc) error {
