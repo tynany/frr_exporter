@@ -27,10 +27,11 @@ type pimCollector struct {
 func NewPIMCollector(logger log.Logger) (Collector, error) {
 	return &pimCollector{logger: logger, descriptions: getPIMDesc()}, nil
 }
+
 func getPIMDesc() map[string]*prometheus.Desc {
 	labels := []string{"vrf"}
-
 	neighborLabels := append(labels, "iface", "neighbor")
+
 	return map[string]*prometheus.Desc{
 		"neighborCount": colPromDesc(pimSubsystem, "neighbor_count_total", "Number of neighbors detected", labels),
 		"upTime":        colPromDesc(pimSubsystem+"_neighbor", "uptime_seconds", "How long has the peer been up.", neighborLabels),
@@ -39,7 +40,6 @@ func getPIMDesc() map[string]*prometheus.Desc {
 
 // Collect implemented as per the Collector interface
 func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
-
 	jsonPIMNeighbors, err := getPIMNeighbors()
 	if err != nil {
 		return fmt.Errorf("cannot get pim neighbors: %s", err)
@@ -53,7 +53,6 @@ func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 
 func getPIMNeighbors() ([]byte, error) {
 	args := []string{"-c", "show ip pim vrf all neighbor json"}
-
 	return execVtyshCommand(args...)
 }
 

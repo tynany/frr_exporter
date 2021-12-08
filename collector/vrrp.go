@@ -18,8 +18,7 @@ const (
 
 var (
 	vrrpSubsystem = "vrrp"
-
-	vrrpStates = []string{vrrpStatusInitialize, vrrpStatusMaster, vrrpStatusBackup}
+	vrrpStates    = []string{vrrpStatusInitialize, vrrpStatusMaster, vrrpStatusBackup}
 )
 
 func init() {
@@ -86,7 +85,6 @@ func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 
 func getVRRPInfo() ([]byte, error) {
 	args := []string{"-c", "show vrrp json"}
-
 	return execVtyshCommand(args...)
 }
 
@@ -105,7 +103,6 @@ func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[
 }
 
 func processInstance(ch chan<- prometheus.Metric, proto string, vrid int, iface string, instance VrrpInstanceInfo, vrrpDesc map[string]*prometheus.Desc) {
-
 	vrrpLabels := []string{proto, strconv.Itoa(vrid), iface, instance.Subinterface}
 
 	for _, state := range vrrpStates {

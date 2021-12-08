@@ -50,7 +50,6 @@ func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 
 func getOSPFInterface() ([]byte, error) {
 	args := []string{"-c", "show ip ospf vrf all interface json"}
-
 	return execVtyshCommand(args...)
 }
 
