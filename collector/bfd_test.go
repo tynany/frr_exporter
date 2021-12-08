@@ -81,7 +81,7 @@ var (
 
 func TestProcessBFDPeers(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBFDPeers(ch, bfdPeers); err != nil {
+	if err := processBFDPeers(ch, bfdPeers, getBFDDesc()); err != nil {
 		t.Errorf("error calling processBFDPeers ipv4unicast: %s", err)
 	}
 	close(ch)

@@ -384,10 +384,10 @@ func compareMetrics(t *testing.T, gotMetrics map[string]float64, expectedMetrics
 
 func TestProcessBGPSummary(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBGPSummary(ch, bgpSumV4Unicast, "ipv4", "unicast"); err != nil {
+	if err := processBGPSummary(ch, bgpSumV4Unicast, "ipv4", "unicast", nil, getBGPDesc()); err != nil {
 		t.Errorf("error calling processBGPSummary ipv4unicast: %s", err)
 	}
-	if err := processBGPSummary(ch, bgpSumV6Unicast, "ipv6", "unicast"); err != nil {
+	if err := processBGPSummary(ch, bgpSumV6Unicast, "ipv6", "unicast", nil, getBGPDesc()); err != nil {
 		t.Errorf("error calling processBGPSummary ipv6unicast: %s", err)
 	}
 	close(ch)
@@ -398,7 +398,7 @@ func TestProcessBGPSummary(t *testing.T) {
 
 func TestProcessBgpL2vpnEvpnSummary(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBgpL2vpnEvpnSummary(ch, evpnVniJson); err != nil {
+	if err := processBgpL2vpnEvpnSummary(ch, evpnVniJson, getBGPL2VPNDesc()); err != nil {
 		t.Errorf("error calling processBgpL2vpnEvpnSummary: %s", err)
 	}
 	close(ch)

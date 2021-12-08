@@ -4,83 +4,56 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	bfdSubsystem = "bfd"
-
-	bfdCountLabels = []string{}
-	bfdPeerLabels  = []string{"local", "peer"}
-	bfdDesc        = map[string]*prometheus.Desc{
-		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", bfdCountLabels),
-		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", bfdPeerLabels),
-		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer (1 = Up, 0 = Down).", bfdPeerLabels),
-	}
-	bfdErrors      = []error{}
-	totalBFDErrors = 0.0
 )
 
-// BFDCollector collects BFD metrics, implemented as per prometheus.Collector interface.
-type BFDCollector struct{}
-
-// NewBFDCollector returns a BFDCollector struct.
-func NewBFDCollector() *BFDCollector {
-	return &BFDCollector{}
+func init() {
+	registerCollector(bfdSubsystem, enabledByDefault, NewBFDCollector)
 }
 
-// Name of the collector. Used to populate flag name.
-func (*BFDCollector) Name() string {
-	return bfdSubsystem
+type bfdCollector struct {
+	logger       log.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
-// Help describes the metrics this collector scrapes. Used to populate flag help.
-func (*BFDCollector) Help() string {
-	return "Collect BFD Metrics"
+// NewBFDCollector collects BFD metrics, implemented as per the Collector interface.
+func NewBFDCollector(logger log.Logger) (Collector, error) {
+	return &bfdCollector{logger: logger, descriptions: getBFDDesc()}, nil
 }
 
-// EnabledByDefault describes whether this collector is enabled by default. Used to populate flag default.
-func (*BFDCollector) EnabledByDefault() bool {
-	return true
-}
-
-// Describe implemented as per the prometheus.Collector interface.
-func (*BFDCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range bfdDesc {
-		ch <- desc
+func getBFDDesc() map[string]*prometheus.Desc {
+	countLabels := []string{}
+	peerLabels := []string{"local", "peer"}
+	return map[string]*prometheus.Desc{
+		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", countLabels),
+		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", peerLabels),
+		"bfdPeerState":  colPromDesc(bfdSubsystem, "peer_state", "State of the bfd peer (1 = Up, 0 = Down).", peerLabels),
 	}
 }
 
-// Collect implemented as per the prometheus.Collector interface.
-func (c *BFDCollector) Collect(ch chan<- prometheus.Metric) {
-	bfdErrors = []error{}
+// Update implemented as per the Collector interface.
+func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonBFDInterface, err := getBFDInterface()
 	if err != nil {
-		totalBFDErrors++
-		bfdErrors = append(bfdErrors, fmt.Errorf("cannot get bfd peers summary: %s", err))
+		return fmt.Errorf("cannot get bfd peers summary: %s", err)
 	} else {
-		if err = processBFDPeers(ch, jsonBFDInterface); err != nil {
-			totalBFDErrors++
-			bfdErrors = append(bfdErrors, fmt.Errorf("%s", err))
+		if err = processBFDPeers(ch, jsonBFDInterface, c.descriptions); err != nil {
+			return err
 		}
 	}
-}
-
-// CollectErrors returns what errors have been gathered.
-func (*BFDCollector) CollectErrors() []error {
-	return bfdErrors
-}
-
-// CollectTotalErrors returns total errors.
-func (*BFDCollector) CollectTotalErrors() float64 {
-	return totalBFDErrors
+	return nil
 }
 
 func getBFDInterface() ([]byte, error) {
 	return execVtyshCommand("-c", "show bfd peers json")
 }
 
-func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte) error {
+func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte, bfdDesc map[string]*prometheus.Desc) error {
 	var bfdPeers []bfdPeer
 	if err := json.Unmarshal(jsonBFDInterface, &bfdPeers); err != nil {
 		return fmt.Errorf("cannot unmarshal bfd peers json: %s", err)
