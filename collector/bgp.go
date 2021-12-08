@@ -106,7 +106,7 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
-	jsonBGPL2vpnEvpnSum, err := getBgpL2vpnEvpnSummary()
+	jsonBGPL2vpnEvpnSum, err := executeBGPCommand("show evpn vni json")
 	if err != nil {
 		return fmt.Errorf("cannot execute 'show evpn vni json': %s", err)
 	} else if len(jsonBGPL2vpnEvpnSum) != 0 {
@@ -115,10 +115,6 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-func getBgpL2vpnEvpnSummary() ([]byte, error) {
-	return execVtyshCommand("-c", "show evpn vni json")
 }
 
 type vxLanStats struct {
@@ -161,7 +157,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 		SAFI = "evpn"
 	}
 
-	jsonBGPSum, err := getBGPSummary(AFI, SAFI)
+	jsonBGPSum, err := executeBGPCommand(fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI))
 	if err != nil {
 		return fmt.Errorf("cannot get bgp %s %s summary: %s", AFI, SAFI, err)
 	} else {
@@ -170,11 +166,6 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 		}
 	}
 	return nil
-}
-
-func getBGPSummary(AFI string, SAFI string) ([]byte, error) {
-	args := []string{"-c", fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)}
-	return execVtyshCommand(args...)
 }
 
 func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger log.Logger, bgpDesc map[string]*prometheus.Desc) error {
@@ -292,7 +283,7 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 		cmd = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)
 	}
 
-	output, err := execVtyshCommand("-c", cmd)
+	output, err := executeBGPCommand(cmd)
 	if err != nil {
 		level.Error(logger).Log("msg", "get neighbor advertised prefixes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
 		return
@@ -341,7 +332,7 @@ func getBGPPeerDesc(logger log.Logger) (map[string]map[string]string, map[string
 	descJSON := make(map[string]map[string]string)
 	descText := make(map[string]string)
 
-	output, err := execVtyshCommand("-c", "show run bgpd")
+	output, err := executeBGPCommand("show bgp neighbors json")
 	if err != nil {
 		return nil, nil, err
 	}

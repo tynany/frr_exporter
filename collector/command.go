@@ -11,11 +11,43 @@ import (
 )
 
 var (
+	vtyshEnable     = kingpin.Flag("frr.vtysh", "Use vtysh to query FRR instead of each daemon's UNIX socket (default: disabled, recommended: disabled).").Default("false").Bool()
 	vtyshPath       = kingpin.Flag("frr.vtysh.path", "Path of vtysh.").Default("/usr/bin/vtysh").String()
 	vtyshTimeout    = kingpin.Flag("frr.vtysh.timeout", "The timeout when running vtysh commands (default: 20s).").Default("20s").Duration()
 	vtyshSudo       = kingpin.Flag("frr.vtysh.sudo", "Enable sudo when executing vtysh commands.").Bool()
 	frrVTYSHOptions = kingpin.Flag("frr.vtysh.options", "Additional options passed to vtysh.").Default("").String()
 )
+
+func executeBGPCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand("-c", cmd)
+	}
+	return socketConn.ExecBGPCmd(cmd)
+}
+
+func executeOSPFCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand("-c", cmd)
+	}
+	return socketConn.ExecOSPFCmd(cmd)
+}
+
+func executePIMCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand("-c", cmd)
+	}
+	return socketConn.ExecPIMCmd(cmd)
+}
+
+func executeVRRPCommand(cmd string) ([]byte, error) {
+	// to do: work out how to interact with the vrrpd UNIX socket
+	return execVtyshCommand("-c", cmd)
+}
+
+func executeBFDCommand(cmd string) ([]byte, error) {
+	// to do: work out how to interact with the bfdd UNIX socket
+	return execVtyshCommand("-c", cmd)
+}
 
 func execVtyshCommand(args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), *vtyshTimeout)

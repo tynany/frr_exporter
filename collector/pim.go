@@ -40,7 +40,7 @@ func getPIMDesc() map[string]*prometheus.Desc {
 
 // Collect implemented as per the Collector interface
 func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonPIMNeighbors, err := getPIMNeighbors()
+	jsonPIMNeighbors, err := executePIMCommand("show ip pim vrf all neighbor json")
 	if err != nil {
 		return fmt.Errorf("cannot get pim neighbors: %s", err)
 	} else {
@@ -49,11 +49,6 @@ func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-func getPIMNeighbors() ([]byte, error) {
-	args := []string{"-c", "show ip pim vrf all neighbor json"}
-	return execVtyshCommand(args...)
 }
 
 func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger log.Logger, pimDesc map[string]*prometheus.Desc) error {

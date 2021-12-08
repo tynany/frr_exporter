@@ -37,7 +37,7 @@ func getOSPFDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonOSPFInterface, err := getOSPFInterface()
+	jsonOSPFInterface, err := executeOSPFCommand("show ip ospf vrf all interface json")
 	if err != nil {
 		return fmt.Errorf("cannot get ospf interface summary: %s", err)
 	} else {
@@ -46,11 +46,6 @@ func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 		}
 	}
 	return nil
-}
-
-func getOSPFInterface() ([]byte, error) {
-	args := []string{"-c", "show ip ospf vrf all interface json"}
-	return execVtyshCommand(args...)
 }
 
 func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte, ospfDesc map[string]*prometheus.Desc) error {
