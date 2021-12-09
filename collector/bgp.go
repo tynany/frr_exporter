@@ -25,8 +25,8 @@ var (
 
 func init() {
 	registerCollector(bgpSubsystem, enabledByDefault, NewBGPCollector)
-	registerCollector(bgpSubsystem+"6", enabledByDefault, NewBGP6Collector)
-	registerCollector(bgpSubsystem+"l2vpn", enabledByDefault, NewBGPL2VPNCollector)
+	registerCollector(bgpSubsystem+"6", disabledByDefault, NewBGP6Collector)
+	registerCollector(bgpSubsystem+"l2vpn", disabledByDefault, NewBGPL2VPNCollector)
 }
 
 type bgpCollector struct {
