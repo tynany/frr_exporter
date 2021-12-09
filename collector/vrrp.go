@@ -62,10 +62,10 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 
 	return map[string]*prometheus.Desc{
 		"vrrpState":       colPromDesc(vrrpSubsystem, "state", "Status of the VRRP state machine.", stateLabels),
-		"adverTx":         colPromDesc(vrrpSubsystem, "adverTx_total", "Advertisements sent total.", labels),
-		"adverRx":         colPromDesc(vrrpSubsystem, "adverRx_total", "Advertisements received total.", labels),
-		"garpTx":          colPromDesc(vrrpSubsystem, "garpTx_total", "Gratuitous ARP sent total.", labels),
-		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighborAdverTx_total", "Neighbor Advertisements sent total.", labels),
+		"adverTx":         colPromDesc(vrrpSubsystem, "advertisements_sent_total", "Advertisements sent total.", labels),
+		"adverRx":         colPromDesc(vrrpSubsystem, "advertisements_received_total", "Advertisements received total.", labels),
+		"garpTx":          colPromDesc(vrrpSubsystem, "gratuitous_arp_sent_total", "Gratuitous ARP sent total.", labels),
+		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighbor_advertisements_sent_total", "Neighbor Advertisements sent total.", labels),
 		"transitions":     colPromDesc(vrrpSubsystem, "state_transitions_total", "Number of transitions of the VRRP state machine in total.", labels),
 	}
 }

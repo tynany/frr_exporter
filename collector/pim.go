@@ -34,7 +34,7 @@ func getPIMDesc() map[string]*prometheus.Desc {
 
 	return map[string]*prometheus.Desc{
 		"neighborCount": colPromDesc(pimSubsystem, "neighbor_count_total", "Number of neighbors detected", labels),
-		"upTime":        colPromDesc(pimSubsystem+"_neighbor", "uptime_seconds", "How long has the peer been up.", neighborLabels),
+		"upTime":        colPromDesc(pimSubsystem, "neighbor_uptime_seconds", "How long has the peer been up.", neighborLabels),
 	}
 }
 
