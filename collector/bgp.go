@@ -25,8 +25,8 @@ var (
 
 func init() {
 	registerCollector(bgpSubsystem, enabledByDefault, NewBGPCollector)
-	registerCollector(bgpSubsystem+"6", enabledByDefault, NewBGP6Collector)
-	registerCollector(bgpSubsystem+"l2vpn", enabledByDefault, NewBGPL2VPNCollector)
+	registerCollector(bgpSubsystem+"6", disabledByDefault, NewBGP6Collector)
+	registerCollector(bgpSubsystem+"l2vpn", disabledByDefault, NewBGPL2VPNCollector)
 }
 
 type bgpCollector struct {
@@ -49,23 +49,21 @@ func getBGPDesc() map[string]*prometheus.Desc {
 	if *bgpPeerDescs {
 		bgpPeerLabels = append(bgpLabels, "peer", "peer_as", "peer_desc")
 	}
-	bgpPeerMetricPrefix := "bgp_peer"
 
 	return map[string]*prometheus.Desc{
-		"ribCount":        colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
-		"ribMemory":       colPromDesc(bgpSubsystem, "rib_memory_bytes", "Memory consumbed by the RIB.", bgpLabels),
-		"peerCount":       colPromDesc(bgpSubsystem, "peers_count_total", "Number peers configured.", bgpLabels),
-		"peerMemory":      colPromDesc(bgpSubsystem, "peers_memory_bytes", "Memory consumed by peers.", bgpLabels),
-		"peerGroupCount":  colPromDesc(bgpSubsystem, "peer_groups_count_total", "Number of peer groups configured.", bgpLabels),
-		"peerGroupMemory": colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
-
-		"msgRcvd":               colPromDesc(bgpPeerMetricPrefix, "message_received_total", "Number of received messages.", bgpPeerLabels),
-		"msgSent":               colPromDesc(bgpPeerMetricPrefix, "message_sent_total", "Number of sent messages.", bgpPeerLabels),
-		"prefixReceivedCount":   colPromDesc(bgpPeerMetricPrefix, "prefixes_received_count_total", "Number of prefixes received.", bgpPeerLabels),
-		"prefixAdvertisedCount": colPromDesc(bgpPeerMetricPrefix, "prefixes_advertised_count_total", "Number of prefixes advertised.", bgpPeerLabels),
-		"state":                 colPromDesc(bgpPeerMetricPrefix, "state", "State of the peer (2 = Administratively Down, 1 = Established, 0 = Down).", bgpPeerLabels),
-		"UptimeSec":             colPromDesc(bgpPeerMetricPrefix, "uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
-		"peerTypesUp":           colPromDesc(bgpPeerMetricPrefix, "types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
+		"ribCount":              colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
+		"ribMemory":             colPromDesc(bgpSubsystem, "rib_memory_bytes", "Memory consumbed by the RIB.", bgpLabels),
+		"peerCount":             colPromDesc(bgpSubsystem, "peers_count_total", "Number peers configured.", bgpLabels),
+		"peerMemory":            colPromDesc(bgpSubsystem, "peers_memory_bytes", "Memory consumed by peers.", bgpLabels),
+		"peerGroupCount":        colPromDesc(bgpSubsystem, "peer_groups_count_total", "Number of peer groups configured.", bgpLabels),
+		"peerGroupMemory":       colPromDesc(bgpSubsystem, "peer_groups_memory_bytes", "Memory consumed by peer groups.", bgpLabels),
+		"msgRcvd":               colPromDesc(bgpSubsystem, "peer_message_received_total", "Number of received messages.", bgpPeerLabels),
+		"msgSent":               colPromDesc(bgpSubsystem, "peer_message_sent_total", "Number of sent messages.", bgpPeerLabels),
+		"prefixReceivedCount":   colPromDesc(bgpSubsystem, "peer_prefixes_received_count_total", "Number of prefixes received.", bgpPeerLabels),
+		"prefixAdvertisedCount": colPromDesc(bgpSubsystem, "peer_prefixes_advertised_count_total", "Number of prefixes advertised.", bgpPeerLabels),
+		"state":                 colPromDesc(bgpSubsystem, "peer_state", "State of the peer (2 = Administratively Down, 1 = Established, 0 = Down).", bgpPeerLabels),
+		"UptimeSec":             colPromDesc(bgpSubsystem, "peer_uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
+		"peerTypesUp":           colPromDesc(bgpSubsystem, "peer_types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
 	}
 }
 
@@ -105,13 +103,14 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 	if err := collectBGP(ch, "l2vpn", c.logger, c.descriptions); err != nil {
 		return err
 	}
-
-	jsonBGPL2vpnEvpnSum, err := executeBGPCommand("show evpn vni json")
+	cmd := "show evpn vni json"
+	jsonBGPL2vpnEvpnSum, err := executeZebraCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot execute 'show evpn vni json': %s", err)
+		return err
+
 	} else if len(jsonBGPL2vpnEvpnSum) != 0 {
 		if err := processBgpL2vpnEvpnSummary(ch, jsonBGPL2vpnEvpnSum, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonBGPL2vpnEvpnSum), err)
 		}
 	}
 	return nil
@@ -130,7 +129,7 @@ type vxLanStats struct {
 func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum []byte, bgpL2vpnDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]vxLanStats
 	if err := json.Unmarshal(jsonBGPL2vpnEvpnSum, &jsonMap); err != nil {
-		return fmt.Errorf("cannot unmarshal outputs of 'show evpn vni json': %s", err)
+		return err
 	}
 
 	for _, vxLanStat := range jsonMap {
@@ -156,13 +155,13 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 	} else if AFI == "l2vpn" {
 		SAFI = "evpn"
 	}
-
-	jsonBGPSum, err := executeBGPCommand(fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI))
+	cmd := fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)
+	jsonBGPSum, err := executeBGPCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get bgp %s %s summary: %s", AFI, SAFI, err)
+		return err
 	} else {
 		if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonBGPSum), err)
 		}
 	}
 	return nil
@@ -171,7 +170,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger log.Logger, bgpDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]bgpProcess
 	if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
-		return fmt.Errorf("cannot unmarshal bgp summary json: %s", err)
+		return err
 	}
 
 	var peerDescJSON map[string]map[string]string

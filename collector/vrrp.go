@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -62,22 +61,23 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 
 	return map[string]*prometheus.Desc{
 		"vrrpState":       colPromDesc(vrrpSubsystem, "state", "Status of the VRRP state machine.", stateLabels),
-		"adverTx":         colPromDesc(vrrpSubsystem, "adverTx_total", "Advertisements sent total.", labels),
-		"adverRx":         colPromDesc(vrrpSubsystem, "adverRx_total", "Advertisements received total.", labels),
-		"garpTx":          colPromDesc(vrrpSubsystem, "garpTx_total", "Gratuitous ARP sent total.", labels),
-		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighborAdverTx_total", "Neighbor Advertisements sent total.", labels),
+		"adverTx":         colPromDesc(vrrpSubsystem, "advertisements_sent_total", "Advertisements sent total.", labels),
+		"adverRx":         colPromDesc(vrrpSubsystem, "advertisements_received_total", "Advertisements received total.", labels),
+		"garpTx":          colPromDesc(vrrpSubsystem, "gratuitous_arp_sent_total", "Gratuitous ARP sent total.", labels),
+		"neighborAdverTx": colPromDesc(vrrpSubsystem, "neighbor_advertisements_sent_total", "Neighbor Advertisements sent total.", labels),
 		"transitions":     colPromDesc(vrrpSubsystem, "state_transitions_total", "Number of transitions of the VRRP state machine in total.", labels),
 	}
 }
 
 // Update implemented as per the Collector interface.
 func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonVRRPInfo, err := executeVRRPCommand("show vrrp json")
+	cmd := "show vrrp json"
+	jsonVRRPInfo, err := executeVRRPCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get vrrp info: %w", err)
+		return err
 	} else {
 		if err := processVRRPInfo(ch, jsonVRRPInfo, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonVRRPInfo), err)
 		}
 	}
 	return nil
@@ -86,7 +86,7 @@ func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[string]*prometheus.Desc) error {
 	var jsonList []VrrpVrInfo
 	if err := json.Unmarshal(jsonVRRPInfo, &jsonList); err != nil {
-		return fmt.Errorf("cannot unmarshal vrrp json: %s", err)
+		return err
 	}
 
 	for _, vrInfo := range jsonList {

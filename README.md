@@ -1,9 +1,9 @@
 # Free Range Routing (FRR) Exporter
 
-Prometheus exporter for FRR version 3.0+ that collects metrics by using `vtysh` and exposes them via HTTP, ready for collecting by Prometheus.
+Prometheus exporter for FRR version 3.0+ that collects metrics from the FRR Unix sockets and exposes them via HTTP, ready for collecting by Prometheus.
 
 ## Getting Started
-To run frr_exporter:
+To run FRR Exporter:
 ```
 ./frr_exporter [flags]
 ```
@@ -32,9 +32,9 @@ Flags:
                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an
                                 option for older versions of FRR that don't have PfxSent field (default: disabled).
       --frr.socket.dir-path="/var/run/frr"
-                                Path of of the localstatedir containing each daemon's UNIX socket.
-      --frr.socket.timeout=20s  Timeout when connecting to the FRR daemon UNIX sockets
-      --frr.vtysh               Use vtysh to query FRR instead of each daemon's UNIX socket (default: disabled, recommended: disabled).
+                                Path of of the localstatedir containing each daemon's Unix socket.
+      --frr.socket.timeout=20s  Timeout when connecting to the FRR daemon Unix sockets
+      --frr.vtysh               Use vtysh to query FRR instead of each daemon's Unix socket (default: disabled, recommended: disabled).
       --frr.vtysh.path="/usr/bin/vtysh"
                                 Path of vtysh.
       --frr.vtysh.timeout=20s   The timeout when running vtysh commands (default: 20s).
@@ -76,13 +76,13 @@ scrape_configs:
 A Docker container is available at [tynany/frr_exporter](https://hub.docker.com/r/tynany/frr_exporter).
 
 ### Example
-Mount the FRR socket directory (default `/var/run/frr`) inside the container, passing that directory to FRR exporter via the `--frr.socket.dir-path` flag:
+Mount the FRR socket directory (default `/var/run/frr`) inside the container, passing that directory to FRR Exporter via the `--frr.socket.dir-path` flag:
 ```
 docker run --restart unless-stopped -d -p 9342:9342 -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.socket.dir-path=/frr_sockets"
 ```
 
 #### If using the --frr.vtysh flag (not recommended)
-Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the frr_exporter option `--frr.vtysh.options` if using :
+Mount the FRR config directory (default `/etc/frr`) and FRR socket directory (default `/var/run/frr`) inside the container, passing those directories to vtysh options `--vty_socket` & `--config_dir` via the FRR Exporter flag `--frr.vtysh.options` if using :
 ```
 docker run --restart unless-stopped -d -p 9342:9342 -v /etc/frr:/frr_config -v /var/run/frr:/frr_sockets tynany/frr_exporter "--frr.vtysh --frr.vtysh.options=--vty_socket=/frr_sockets --config_dir=/frr_config"
 ```
@@ -107,10 +107,10 @@ VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - V
 PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
 
 ### Sending commands to FRR
-By default, FRR exporter sends commands to FRR via the UNIX sockets exposed by each FRR daemon (e.g. bgpd, ospfd, etc), usually located in `/var/run/frr`. If the sockets are located in a folder other than `/var/run/frr`, pass that directory to FRR exporter via the `--frr.socket.dir-path` flag.
+By default, FRR Exporter sends commands to FRR via the Unix sockets exposed by each FRR daemon (e.g. bgpd, ospfd, etc), usually located in `/var/run/frr`. If the sockets are located in a folder other than `/var/run/frr`, pass that directory to FRR Exporter via the `--frr.socket.dir-path` flag.
 
 #### VTYSH
-If desired, FRR exporter can interface with FRR via the `vtysh` command by passing the `-frr.vtysh` flag to FRR exporter. This is not recommended, and is far slower than FRR exporter's default way of sending commands to FRR via UNIX sockets. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
+If desired, FRR Exporter can interface with FRR via the `vtysh` command by passing the `--frr.vtysh` flag to FRR Exporter. This is not recommended, and is far slower than FRR Exporter's default way of sending commands to FRR via Unix sockets. The default timeout is 20s but can be modified via the `--frr.vtysh.timeout` flag.
 
 ### BGP: Peer Description Labels
 The description of a BGP peer can be added as a label to all peer metrics by passing the `--collector.bgp.peer-descriptions` flag. The peer description must be JSON formatted with a `desc` field. Example configuration:
@@ -134,7 +134,7 @@ Note, it is recommended to leave this feature disabled as peer descriptions can 
 ### BGP: Advertised Prefixes to a Peer
 This is an option for older versions of FRR. If your FRR shows the "PfxSnt" field for Peers in the Established state in the output of "show bgp summary json", you don't need to enable this option.
 
-The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, FRR does not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 `vtysh -c 'sh ip bgp neigh X.X.X.X advertised-routes json'` commands are executed. This can be slow -- the commands are executed in parallel by frr_exporter, but vtysh/FRR seems to execute them in serial. Due to the potential negative performance implications of running `vtysh` for every BGP peer, this metric is disabled by default.
+The number of prefixes advertised to a BGP peer can be enabled (i.e. the `frr_exporter_bgp_prefixes_advertised_count_total` metric) by passing the `--collector.bgp.advertised-prefixes` flag. Please note, older FRR versions do not expose a summary of prefixes advertised to BGP peers, so each peer needs to be queried individually. For example, if 20 BGP peers are configured, 20 'sh ip bgp neigh X.X.X.X advertised-routes json' commands are sent to the Unix socket (or `vtysh` if the --frr.vtysh` is used). This can be slow, especially if using the `--frr.vtysh` flag, The commands are run in parallel by FRR Exporter, but FRR executes them in serial. Due to the potential negative performance implications of running `vtysh` for every BGP peer, this metric is disabled by default.
 
 ### BGP: frr_bgp_peer_types_up
 FRR Exporter exposes a special metric, `frr_bgp_peer_types_up`, that can be used in scenarios where you want to create Prometheus queries that report on the number of types of BGP peers that are currently established, such as for Alertmanager. To implement this metric, a JSON formatted description must be configured on your BGP group. FRR Exporter will then use the value from the keys specific by the `--collector.bgp.peer-types.keys` flag (the default is `type`), and aggregate all BGP peers that are currently established and configured with that type.

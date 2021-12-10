@@ -34,8 +34,8 @@ var (
 		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
 
-	socketDirPath = kingpin.Flag("frr.socket.dir-path", "Path of of the localstatedir containing each daemon's UNIX socket.").Default("/var/run/frr").String()
-	socketTimeout = kingpin.Flag("frr.socket.timeout", "Timeout when connecting to the FRR daemon UNIX sockets").Default("20s").Duration()
+	socketDirPath = kingpin.Flag("frr.socket.dir-path", "Path of of the localstatedir containing each daemon's Unix socket.").Default("/var/run/frr").String()
+	socketTimeout = kingpin.Flag("frr.socket.timeout", "Timeout when connecting to the FRR daemon Unix sockets").Default("20s").Duration()
 
 	factories              = make(map[string]func(logger log.Logger) (Collector, error))
 	initiatedCollectorsMtx = sync.Mutex{}
@@ -148,4 +148,8 @@ func newGauge(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric flo
 
 func newCounter(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
 	ch <- prometheus.MustNewConstMetric(descName, prometheus.CounterValue, metric, labels...)
+}
+
+func cmdOutputProcessError(cmd, output string, err error) error {
+	return fmt.Errorf("cannot process output of %s: %w: command output: %s", cmd, err, output)
 }

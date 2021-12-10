@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,12 +37,13 @@ func getBFDDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonBFDInterface, err := executeBFDCommand("show bfd peers json")
+	cmd := "show bfd peers json"
+	jsonBFDInterface, err := executeBFDCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get bfd peers summary: %s", err)
+		return err
 	} else {
 		if err = processBFDPeers(ch, jsonBFDInterface, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonBFDInterface), err)
 		}
 	}
 	return nil
@@ -52,7 +52,7 @@ func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
 func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte, bfdDesc map[string]*prometheus.Desc) error {
 	var bfdPeers []bfdPeer
 	if err := json.Unmarshal(jsonBFDInterface, &bfdPeers); err != nil {
-		return fmt.Errorf("cannot unmarshal bfd peers json: %s", err)
+		return err
 	}
 
 	// metric is a count of the number of peers

@@ -1,11 +1,11 @@
 PROMU_VERSION := 0.12.0
 
 setup_promu:
-	curl -s -L https://github.com/prometheus/promu/releases/download/v$(PROMU_VERSION)/promu-$(PROMU_VERSION).linux-amd64.tar.gz | tar -xvzf - 
+	curl -s -L https://github.com/prometheus/promu/releases/download/v$(PROMU_VERSION)/promu-$(PROMU_VERSION).linux-amd64.tar.gz | tar -xvzf -
 	mv promu-$(PROMU_VERSION).linux-amd64/promu .
 
-build: 
+build:
 	./promu build --prefix $(PREFIX) $(PROMU_BINARIES)
 
 test:
-	go test
+	go test ./...

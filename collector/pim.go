@@ -34,18 +34,19 @@ func getPIMDesc() map[string]*prometheus.Desc {
 
 	return map[string]*prometheus.Desc{
 		"neighborCount": colPromDesc(pimSubsystem, "neighbor_count_total", "Number of neighbors detected", labels),
-		"upTime":        colPromDesc(pimSubsystem+"_neighbor", "uptime_seconds", "How long has the peer been up.", neighborLabels),
+		"upTime":        colPromDesc(pimSubsystem, "neighbor_uptime_seconds", "How long has the peer been up.", neighborLabels),
 	}
 }
 
 // Collect implemented as per the Collector interface
 func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonPIMNeighbors, err := executePIMCommand("show ip pim vrf all neighbor json")
+	cmd := "show ip pim vrf all neighbor json"
+	jsonPIMNeighbors, err := executePIMCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get pim neighbors: %s", err)
+		return err
 	} else {
 		if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonPIMNeighbors), err)
 		}
 	}
 	return nil
