@@ -149,3 +149,7 @@ func newGauge(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric flo
 func newCounter(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
 	ch <- prometheus.MustNewConstMetric(descName, prometheus.CounterValue, metric, labels...)
 }
+
+func cmdOutputProcessError(cmd, output string, err error) error {
+	return fmt.Errorf("cannot process output of %s: %w: command output: %s", cmd, err, output)
+}

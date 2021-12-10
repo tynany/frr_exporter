@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -72,12 +71,13 @@ func getVRRPDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
-	jsonVRRPInfo, err := executeVRRPCommand("show vrrp json")
+	cmd := "show vrrp json"
+	jsonVRRPInfo, err := executeVRRPCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get vrrp info: %w", err)
+		return err
 	} else {
 		if err := processVRRPInfo(ch, jsonVRRPInfo, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonVRRPInfo), err)
 		}
 	}
 	return nil
@@ -86,7 +86,7 @@ func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[string]*prometheus.Desc) error {
 	var jsonList []VrrpVrInfo
 	if err := json.Unmarshal(jsonVRRPInfo, &jsonList); err != nil {
-		return fmt.Errorf("cannot unmarshal vrrp json: %s", err)
+		return err
 	}
 
 	for _, vrInfo := range jsonList {

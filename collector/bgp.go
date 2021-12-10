@@ -103,13 +103,14 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 	if err := collectBGP(ch, "l2vpn", c.logger, c.descriptions); err != nil {
 		return err
 	}
-
-	jsonBGPL2vpnEvpnSum, err := executeBGPCommand("show evpn vni json")
+	cmd := "show evpn vni json"
+	jsonBGPL2vpnEvpnSum, err := executeBGPCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot execute 'show evpn vni json': %s", err)
+		return err
+
 	} else if len(jsonBGPL2vpnEvpnSum) != 0 {
 		if err := processBgpL2vpnEvpnSummary(ch, jsonBGPL2vpnEvpnSum, c.descriptions); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonBGPL2vpnEvpnSum), err)
 		}
 	}
 	return nil
@@ -128,7 +129,7 @@ type vxLanStats struct {
 func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum []byte, bgpL2vpnDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]vxLanStats
 	if err := json.Unmarshal(jsonBGPL2vpnEvpnSum, &jsonMap); err != nil {
-		return fmt.Errorf("cannot unmarshal outputs of 'show evpn vni json': %s", err)
+		return err
 	}
 
 	for _, vxLanStat := range jsonMap {
@@ -154,13 +155,13 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 	} else if AFI == "l2vpn" {
 		SAFI = "evpn"
 	}
-
-	jsonBGPSum, err := executeBGPCommand(fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI))
+	cmd := fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)
+	jsonBGPSum, err := executeBGPCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("cannot get bgp %s %s summary: %s", AFI, SAFI, err)
+		return err
 	} else {
 		if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc); err != nil {
-			return err
+			return cmdOutputProcessError(cmd, string(jsonBGPSum), err)
 		}
 	}
 	return nil
@@ -169,7 +170,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger log.Logger, bgpDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]bgpProcess
 	if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
-		return fmt.Errorf("cannot unmarshal bgp summary json: %s", err)
+		return err
 	}
 
 	var peerDescJSON map[string]map[string]string

@@ -20,36 +20,36 @@ var (
 
 func executeBGPCommand(cmd string) ([]byte, error) {
 	if *vtyshEnable {
-		return execVtyshCommand("-c", cmd)
+		return execVtyshCommand(cmd)
 	}
 	return socketConn.ExecBGPCmd(cmd)
 }
 
 func executeOSPFCommand(cmd string) ([]byte, error) {
 	if *vtyshEnable {
-		return execVtyshCommand("-c", cmd)
+		return execVtyshCommand(cmd)
 	}
 	return socketConn.ExecOSPFCmd(cmd)
 }
 
 func executePIMCommand(cmd string) ([]byte, error) {
 	if *vtyshEnable {
-		return execVtyshCommand("-c", cmd)
+		return execVtyshCommand(cmd)
 	}
 	return socketConn.ExecPIMCmd(cmd)
 }
 
 func executeVRRPCommand(cmd string) ([]byte, error) {
 	// to do: work out how to interact with the vrrpd UNIX socket
-	return execVtyshCommand("-c", cmd)
+	return execVtyshCommand(cmd)
 }
 
 func executeBFDCommand(cmd string) ([]byte, error) {
 	// to do: work out how to interact with the bfdd UNIX socket
-	return execVtyshCommand("-c", cmd)
+	return execVtyshCommand(cmd)
 }
 
-func execVtyshCommand(args ...string) ([]byte, error) {
+func execVtyshCommand(vtyshCmd string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), *vtyshTimeout)
 	defer cancel()
 
@@ -69,7 +69,7 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 		a = append(a, frrOptions...)
 	}
 
-	a = append(a, args...)
+	a = append(a, "-c", vtyshCmd)
 
 	cmd := exec.CommandContext(ctx, executable, a...)
 
@@ -79,7 +79,7 @@ func execVtyshCommand(args ...string) ([]byte, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s", err, strings.Replace(stderr.String(), "\n", " ", -1))
+		return stdout.Bytes(), fmt.Errorf("command %s failed: %w: stderr: %s: stdout: %s", cmd, err, strings.Replace(stderr.String(), "\n", " ", -1), strings.Replace(stdout.String(), "\n", " ", -1))
 	}
 
 	return stdout.Bytes(), nil
