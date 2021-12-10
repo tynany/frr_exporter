@@ -29,6 +29,14 @@ func (c Connection) ExecPIMCmd(cmd string) ([]byte, error) {
 	return execteCmd(filepath.Clean(c.dirPath+"/pimd.vty"), cmd, c.timeout)
 }
 
+func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
+	return execteCmd(filepath.Clean(c.dirPath+"/zebra.vty"), cmd, c.timeout)
+}
+
+func (c Connection) ExecVRRPCmd(cmd string) ([]byte, error) {
+	return execteCmd(filepath.Clean(c.dirPath+"/vrrpd.vty"), cmd, c.timeout)
+}
+
 func execteCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 	var buf bytes.Buffer
 	addr := net.UnixAddr{Name: socketPath, Net: "unix"}
@@ -38,7 +46,9 @@ func execteCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 		return buf.Bytes(), err
 	}
 
-	conn.SetDeadline(time.Now().Add(timeout))
+	if err = conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return buf.Bytes(), err
+	}
 
 	// frr sockets expect each command to end with \0
 	_, err = conn.Write([]byte(fmt.Sprintf("%s\000", cmd)))

@@ -39,13 +39,24 @@ func executePIMCommand(cmd string) ([]byte, error) {
 	return socketConn.ExecPIMCmd(cmd)
 }
 
+func executeZebraCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand(cmd)
+	}
+	return socketConn.ExecZebraCmd(cmd)
+}
+
 func executeVRRPCommand(cmd string) ([]byte, error) {
-	// to do: work out how to interact with the vrrpd UNIX socket
-	return execVtyshCommand(cmd)
+	if *vtyshEnable {
+		return execVtyshCommand(cmd)
+	}
+	return socketConn.ExecVRRPCmd(cmd)
+
 }
 
 func executeBFDCommand(cmd string) ([]byte, error) {
-	// to do: work out how to interact with the bfdd UNIX socket
+	// to do: work out how to interact with the bfdd.vty UNIX socket:
+	// % [BFD] Unknown command: show bfd peers json
 	return execVtyshCommand(cmd)
 }
 

@@ -104,7 +104,7 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 		return err
 	}
 	cmd := "show evpn vni json"
-	jsonBGPL2vpnEvpnSum, err := executeBGPCommand(cmd)
+	jsonBGPL2vpnEvpnSum, err := executeZebraCommand(cmd)
 	if err != nil {
 		return err
 
