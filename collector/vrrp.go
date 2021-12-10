@@ -75,10 +75,9 @@ func (c *vrrpCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonVRRPInfo, err := executeVRRPCommand(cmd)
 	if err != nil {
 		return err
-	} else {
-		if err := processVRRPInfo(ch, jsonVRRPInfo, c.descriptions); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonVRRPInfo), err)
-		}
+	}
+	if err := processVRRPInfo(ch, jsonVRRPInfo, c.descriptions); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonVRRPInfo), err)
 	}
 	return nil
 }

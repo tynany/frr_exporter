@@ -41,10 +41,9 @@ func (c *bfdCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonBFDInterface, err := executeBFDCommand(cmd)
 	if err != nil {
 		return err
-	} else {
-		if err = processBFDPeers(ch, jsonBFDInterface, c.descriptions); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonBFDInterface), err)
-		}
+	}
+	if err = processBFDPeers(ch, jsonBFDInterface, c.descriptions); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonBFDInterface), err)
 	}
 	return nil
 }

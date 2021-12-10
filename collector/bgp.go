@@ -107,11 +107,12 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonBGPL2vpnEvpnSum, err := executeZebraCommand(cmd)
 	if err != nil {
 		return err
-
-	} else if len(jsonBGPL2vpnEvpnSum) != 0 {
-		if err := processBgpL2vpnEvpnSummary(ch, jsonBGPL2vpnEvpnSum, c.descriptions); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonBGPL2vpnEvpnSum), err)
-		}
+	}
+	if len(jsonBGPL2vpnEvpnSum) == 0 {
+		return nil
+	}
+	if err := processBgpL2vpnEvpnSummary(ch, jsonBGPL2vpnEvpnSum, c.descriptions); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonBGPL2vpnEvpnSum), err)
 	}
 	return nil
 }
@@ -159,10 +160,9 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 	jsonBGPSum, err := executeBGPCommand(cmd)
 	if err != nil {
 		return err
-	} else {
-		if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonBGPSum), err)
-		}
+	}
+	if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonBGPSum), err)
 	}
 	return nil
 }

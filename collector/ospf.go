@@ -41,10 +41,9 @@ func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonOSPFInterface, err := executeOSPFCommand(cmd)
 	if err != nil {
 		return err
-	} else {
-		if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
-		}
+	}
+	if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
 	}
 	return nil
 }
