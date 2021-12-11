@@ -44,10 +44,9 @@ func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 	jsonPIMNeighbors, err := executePIMCommand(cmd)
 	if err != nil {
 		return err
-	} else {
-		if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger, c.descriptions); err != nil {
-			return cmdOutputProcessError(cmd, string(jsonPIMNeighbors), err)
-		}
+	}
+	if err := processPIMNeighbors(ch, jsonPIMNeighbors, c.logger, c.descriptions); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonPIMNeighbors), err)
 	}
 	return nil
 }
