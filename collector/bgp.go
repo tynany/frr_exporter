@@ -88,14 +88,15 @@ func NewBGPL2VPNCollector(logger log.Logger) (Collector, error) {
 }
 
 func getBGPL2VPNDesc() map[string]*prometheus.Desc {
+	bgpDesc := getBGPDesc()
 	labels := []string{"vni", "type", "vxlanIf", "tenantVrf"}
 	metricPrefix := "bgp_l2vpn_evpn"
 
-	return map[string]*prometheus.Desc{
-		"numMacs":        colPromDesc(metricPrefix, "mac_count_total", "Number of known MAC addresses", labels),
-		"numArpNd":       colPromDesc(metricPrefix, "arp_nd_count_total", "Number of ARP / ND entries", labels),
-		"numRemoteVteps": colPromDesc(metricPrefix, "remote_vtep_count_total", "Number of known remote VTEPs. A value of -1 indicates a non-integer output from FRR, such as n/a.", labels),
-	}
+	bgpDesc["numMacs"] = colPromDesc(metricPrefix, "mac_count_total", "Number of known MAC addresses", labels)
+	bgpDesc["numArpNd"] = colPromDesc(metricPrefix, "arp_nd_count_total", "Number of ARP / ND entries", labels)
+	bgpDesc["numRemoteVteps"] = colPromDesc(metricPrefix, "remote_vtep_count_total", "Number of known remote VTEPs. A value of -1 indicates a non-integer output from FRR, such as n/a.", labels)
+
+	return bgpDesc
 }
 
 // Update implemented as per the Collector interface.
