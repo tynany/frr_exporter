@@ -3,14 +3,17 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	ospfSubsystem = "ospf"
+	ospfSubsystem    = "ospf"
+	frrOSPFInstances = kingpin.Flag("collector.ospf.instances", "Comma-separated list of instance IDs if using multiple OSPF instances").Default("").String()
 )
 
 func init() {
@@ -20,15 +23,39 @@ func init() {
 type ospfCollector struct {
 	logger       log.Logger
 	descriptions map[string]*prometheus.Desc
+	instanceIDs  []int
 }
 
 // NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
 func NewOSPFCollector(logger log.Logger) (Collector, error) {
-	return &ospfCollector{logger: logger, descriptions: getOSPFDesc()}, nil
+	var instanceIDs []int
+	if len(*frrOSPFInstances) > 0 {
+		// FRR Exporter does not support multi-instance when using `vtysh` to interface with FRR
+		// via the `--frr.vtysh` flag for the following reasons:
+		//   * Invalid JSON is returned when OSPF commands are executed by `vtysh`. For example,
+		//     `show ip ospf vrf all interface json` returns the concatenated JSON from each OSPF instance.
+		//   * Vtysh does not support `vrf` and `instance` in the same commend. For example,
+		//     `show ip ospf 1 vrf all interface json` is an invalid command.
+		if *vtyshEnable {
+			return nil, fmt.Errorf("cannot use --frr.vtysh with --collector.ospf.instances")
+		}
+		instances := strings.Split(*frrOSPFInstances, ",")
+		for _, id := range instances {
+			i, err := strconv.Atoi(id)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse instance ID %s: %w", id, err)
+			}
+			instanceIDs = append(instanceIDs, i)
+		}
+	}
+	return &ospfCollector{logger: logger, instanceIDs: instanceIDs, descriptions: getOSPFDesc()}, nil
 }
 
 func getOSPFDesc() map[string]*prometheus.Desc {
 	labels := []string{"vrf", "iface", "area"}
+	if len(*frrOSPFInstances) > 0 {
+		labels = append(labels, "instance")
+	}
 	return map[string]*prometheus.Desc{
 		"ospfIfaceNeigh":    colPromDesc(ospfSubsystem, "neighbors", "Number of neighbors detected.", labels),
 		"ospfIfaceNeighAdj": colPromDesc(ospfSubsystem, "neighbor_adjacencies", "Number of neighbor adjacencies formed.", labels),
@@ -38,17 +65,33 @@ func getOSPFDesc() map[string]*prometheus.Desc {
 // Update implemented as per the Collector interface.
 func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 	cmd := "show ip ospf vrf all interface json"
+
+	if len(c.instanceIDs) > 0 {
+		for _, id := range c.instanceIDs {
+			jsonOSPFInterface, err := executeOSPFMultiInstanceCommand(cmd, id)
+			if err != nil {
+				return err
+			}
+
+			if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions, id); err != nil {
+				return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
+			}
+		}
+		return nil
+	}
+
 	jsonOSPFInterface, err := executeOSPFCommand(cmd)
 	if err != nil {
 		return err
 	}
-	if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions); err != nil {
+
+	if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions, 0); err != nil {
 		return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
 	}
 	return nil
 }
 
-func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte, ospfDesc map[string]*prometheus.Desc) error {
+func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {
 	// Unfortunately, the 'show ip ospf vrf all interface json' JSON  output is poorly structured. Instead
 	// of all interfaces being in a list, each interface is added as a key on the same level of vrfName and
 	// vrfId. As such, we have to loop through each key and apply logic to determine whether the key is an
@@ -60,8 +103,13 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 
 	for vrfName, vrfData := range jsonMap {
 		var _tempvrfInstance map[string]json.RawMessage
-		if err := json.Unmarshal(vrfData, &_tempvrfInstance); err != nil {
-			return fmt.Errorf("cannot unmarshal VRF instance json: %s", err)
+		switch vrfName {
+		case "ospfInstance":
+			// Do nothing
+		default:
+			if err := json.Unmarshal(vrfData, &_tempvrfInstance); err != nil {
+				return fmt.Errorf("cannot unmarshal VRF instance json: %s", err)
+			}
 		}
 
 		for ospfInstanceKey, ospfInstanceVal := range _tempvrfInstance {
@@ -81,7 +129,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 					if !newIface.TimerPassiveIface {
 						// The labels are "vrf", "newIface", "area"
 						labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
-						ospfMetrics(ch, newIface, labels, ospfDesc)
+						ospfMetrics(ch, newIface, labels, ospfDesc, instanceID)
 					}
 				}
 			default:
@@ -93,7 +141,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 				if !iface.TimerPassiveIface {
 					// The labels are "vrf", "iface", "area"
 					labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
-					ospfMetrics(ch, iface, labels, ospfDesc)
+					ospfMetrics(ch, iface, labels, ospfDesc, instanceID)
 				}
 			}
 		}
@@ -101,7 +149,10 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 	return nil
 }
 
-func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, ospfDesc map[string]*prometheus.Desc) {
+func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
+	if instanceID != 0 {
+		labels = append(labels, strconv.Itoa(instanceID))
+	}
 	newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
 	newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
 }
