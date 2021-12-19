@@ -42,11 +42,11 @@ Flags:
       --frr.vtysh.timeout=20s   The timeout when running vtysh commands (default: 20s).
       --frr.vtysh.sudo          Enable sudo when executing vtysh commands.
       --frr.vtysh.options=""    Additional options passed to vtysh.
-      --collector.bfd           Enable the bfd collector (default: enabled).
-      --collector.bgp           Enable the bgp collector (default: enabled).
-      --collector.bgp6          Enable the bgp6 collector (default: enabled).
-      --collector.bgpl2vpn      Enable the bgpl2vpn collector (default: enabled).
-      --collector.ospf          Enable the ospf collector (default: enabled).
+      --collector.bfd           Enable the bfd collector (default: enabled, to disable use --no-collector.bfd).
+      --collector.bgp           Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
+      --collector.bgp6          Enable the bgp6 collector (default: disabled).
+      --collector.bgpl2vpn      Enable the bgpl2vpn collector (default: disabled).
+      --collector.ospf          Enable the ospf collector (default: enabled, to disable use --no-collector.ospf).
       --collector.pim           Enable the pim collector (default: disabled).
       --collector.vrrp          Enable the vrrp collector (default: disabled).
       --web.listen-address=":9342"
@@ -57,7 +57,6 @@ Flags:
       --log.level=info          Only log messages with the given severity or above. One of: [debug, info, warn, error]
       --log.format=logfmt       Output format of log messages. One of: [logfmt, json]
       --version                 Show application version.
-
 ```
 
 Promethues configuraiton:

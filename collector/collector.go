@@ -49,8 +49,12 @@ func registerCollector(name string, enabledByDefaultStatus bool, factory func(lo
 		defaultState = "enabled"
 	}
 
+	help := fmt.Sprintf("Enable the %s collector (default: %s).", name, defaultState)
+	if enabledByDefaultStatus {
+		help = fmt.Sprintf("Enable the %s collector (default: %s, to disable use --no-collector.%s).", name, defaultState, name)
+	}
 	factories[name] = factory
-	collectorState[name] = kingpin.Flag(fmt.Sprintf("collector.%s", name), fmt.Sprintf("Enable the %s collector (default: %s).", name, defaultState)).Default(strconv.FormatBool(enabledByDefaultStatus)).Bool()
+	collectorState[name] = kingpin.Flag(fmt.Sprintf("collector.%s", name), help).Default(strconv.FormatBool(enabledByDefaultStatus)).Bool()
 }
 
 // Collector is the interface a collector has to implement.
