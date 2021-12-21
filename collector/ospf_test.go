@@ -158,22 +158,46 @@ var (
 	  }
 	}
 `)
-	expectedMetrics = map[string]float64{
-		"frr_ospf_neighbors{area=0.0.0.0,iface=swp1,vrf=default}":            0,
-		"frr_ospf_neighbors{area=0.0.0.0,iface=swp2,vrf=default}":            1,
-		"frr_ospf_neighbors{area=0.0.0.0,iface=swp3,vrf=red}":                0,
-		"frr_ospf_neighbors{area=0.0.0.0,iface=swp4,vrf=red}":                1,
-		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp1,vrf=default}": 0,
-		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp2,vrf=default}": 1,
-		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp3,vrf=red}":     0,
-		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp4,vrf=red}":     1,
+	expectedOSPFMetrics = map[string]float64{
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp1,vrf=default}":                       0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp2,vrf=default}":                       1,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp3,vrf=red}":                           0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp4,vrf=red}":                           1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp1,vrf=default}":            0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp2,vrf=default}":            1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp3,vrf=red}":                0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp4,vrf=red}":                1,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp1,instance=1,vrf=default}":            0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp2,instance=1,vrf=default}":            1,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp3,instance=1,vrf=red}":                0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp4,instance=1,vrf=red}":                1,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp1,instance=2,vrf=default}":            0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp2,instance=2,vrf=default}":            1,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp3,instance=2,vrf=red}":                0,
+		"frr_ospf_neighbors{area=0.0.0.0,iface=swp4,instance=2,vrf=red}":                1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp1,instance=1,vrf=default}": 0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp2,instance=1,vrf=default}": 1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp3,instance=1,vrf=red}":     0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp4,instance=1,vrf=red}":     1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp1,instance=2,vrf=default}": 0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp2,instance=2,vrf=default}": 1,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp3,instance=2,vrf=red}":     0,
+		"frr_ospf_neighbor_adjacencies{area=0.0.0.0,iface=swp4,instance=2,vrf=red}":     1,
 	}
 )
 
 func TestProcessOSPFInterface(t *testing.T) {
-	ch := make(chan prometheus.Metric, 1024)
-	if err := processOSPFInterface(ch, ospfInterfaceSum, getOSPFDesc()); err != nil {
+	ch := make(chan prometheus.Metric, len(expectedOSPFMetrics))
+	if err := processOSPFInterface(ch, ospfInterfaceSum, getOSPFDesc(), 0); err != nil {
 		t.Errorf("error calling processOSPFInterface ipv4unicast: %s", err)
+	}
+
+	// test for OSPF multiple instances
+	*frrOSPFInstances = "1,2"
+	for i := 1; i <= 2; i++ {
+		if err := processOSPFInterface(ch, ospfInterfaceSum, getOSPFDesc(), i); err != nil {
+			t.Errorf("error calling processOSPFInterface ipv4unicast: %s", err)
+		}
 	}
 	close(ch)
 
@@ -214,7 +238,7 @@ func TestProcessOSPFInterface(t *testing.T) {
 	}
 
 	for metricName, metricVal := range gotMetrics {
-		if expectedMetricVal, ok := expectedMetrics[metricName]; ok {
+		if expectedMetricVal, ok := expectedOSPFMetrics[metricName]; ok {
 			if expectedMetricVal != metricVal {
 				t.Errorf("metric %s expected value %v got %v", metricName, expectedMetricVal, metricVal)
 			}
@@ -224,7 +248,7 @@ func TestProcessOSPFInterface(t *testing.T) {
 		}
 	}
 
-	for expectedMetricName, expectedMetricVal := range expectedMetrics {
+	for expectedMetricName, expectedMetricVal := range expectedOSPFMetrics {
 		if _, ok := gotMetrics[expectedMetricName]; !ok {
 			t.Errorf("missing metric: %s value %v", expectedMetricName, expectedMetricVal)
 		}

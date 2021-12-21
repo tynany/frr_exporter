@@ -197,6 +197,28 @@ less, you'd use `sum(frr_bgp_peer_types_up{type="internet"}) <= 1`.
 
 To enable `frr_bgp_peer_types_up`, use the `--collector.bgp.peer-types` flag.
 
+### OSPF: Multiple Instance Support
+[OSPF Mulit-instace](https://docs.frrouting.org/en/latest/ospfd.html#multi-instance-support)
+is supported by passing a comma-separated list of instances ID to FRR Exporter via
+the `--collector.ospf.instances` flag.
+
+For example, if `/etc/frr/daemons` contains the below configuration, FRR Exporter 
+should be run as: `./frr_exporter --collector.ospf.instances=1,5,6`.
+
+```
+...
+ospfd=yes
+ospfd_instances=1,5,6
+...
+```
+
+Note: FRR Exporter does not support multi-instance when using `vtysh` to interface with FRR
+via the `--frr.vtysh` flag for the following reasons:
+* Invalid JSON is returned when OSPF commands are executed by `vtysh`. For example,\
+`show ip ospf vrf all interface json` returns the concatenated JSON from each OSPF instance. 
+* Vtysh does not support `vrf` and `instance` in the same commend. For example,\
+`show ip ospf 1 vrf all interface json` is an invalid command.
+
 ## Development
 
 ### Building

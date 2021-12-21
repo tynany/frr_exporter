@@ -25,6 +25,10 @@ func executeBGPCommand(cmd string) ([]byte, error) {
 	return socketConn.ExecBGPCmd(cmd)
 }
 
+func executeOSPFMultiInstanceCommand(cmd string, instanceID int) ([]byte, error) {
+	return socketConn.ExecOSPFMultiInstanceCmd(cmd, instanceID)
+}
+
 func executeOSPFCommand(cmd string) ([]byte, error) {
 	if *vtyshEnable {
 		return execVtyshCommand(cmd)
