@@ -24,15 +24,15 @@ Flags:
       --collector.bgp.peer-types
                                 Enable the frr_bgp_peer_types_up metric (default: disabled).
       --collector.bgp.peer-types.keys=type ...
-                                Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports
-                                multiple values (default: type).
+                                Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric.
+                                Supports multiple values (default: type).
       --collector.bgp.peer-descriptions
                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
       --collector.bgp.peer-descriptions.plain-text
                                 Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
       --collector.bgp.advertised-prefixes
-                                Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an
-                                option for older versions of FRR that don't have PfxSent field (default: disabled).
+                                Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer.
+                                This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
       --frr.socket.dir-path="/var/run/frr"
                                 Path of of the localstatedir containing each daemon's Unix socket.
       --frr.socket.timeout=20s  Timeout when connecting to the FRR daemon Unix sockets
@@ -42,6 +42,8 @@ Flags:
       --frr.vtysh.timeout=20s   The timeout when running vtysh commands (default: 20s).
       --frr.vtysh.sudo          Enable sudo when executing vtysh commands.
       --frr.vtysh.options=""    Additional options passed to vtysh.
+      --collector.ospf.instances=""
+                                Comma-separated list of instance IDs if using multiple OSPF instances
       --collector.bfd           Enable the bfd collector (default: enabled, to disable use --no-collector.bfd).
       --collector.bgp           Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
       --collector.bgp6          Enable the bgp6 collector (default: disabled).
