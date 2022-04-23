@@ -25,7 +25,7 @@ func init() {
 }
 
 type VrrpVrInfo struct {
-	Vrid      int
+	Vrid      uint32
 	Interface string
 	V6Info    VrrpInstanceInfo `json:"v6"`
 	V4Info    VrrpInstanceInfo `json:"v4"`
@@ -38,11 +38,11 @@ type VrrpInstanceInfo struct {
 }
 
 type VrrpInstanceStats struct {
-	AdverTx         *int
-	AdverRx         *int
-	GarpTx          *int
-	NeighborAdverTx *int
-	Transitions     *int
+	AdverTx         *uint32
+	AdverRx         *uint32
+	GarpTx          *uint32
+	NeighborAdverTx *uint32
+	Transitions     *uint32
 }
 
 type vrrpCollector struct {
@@ -96,8 +96,8 @@ func processVRRPInfo(ch chan<- prometheus.Metric, jsonVRRPInfo []byte, desc map[
 	return nil
 }
 
-func processInstance(ch chan<- prometheus.Metric, proto string, vrid int, iface string, instance VrrpInstanceInfo, vrrpDesc map[string]*prometheus.Desc) {
-	vrrpLabels := []string{proto, strconv.Itoa(vrid), iface, instance.Subinterface}
+func processInstance(ch chan<- prometheus.Metric, proto string, vrid uint32, iface string, instance VrrpInstanceInfo, vrrpDesc map[string]*prometheus.Desc) {
+	vrrpLabels := []string{proto, strconv.FormatUint(uint64(vrid), 10), iface, instance.Subinterface}
 
 	for _, state := range vrrpStates {
 		stateLabels := append(vrrpLabels, state)

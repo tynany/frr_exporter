@@ -119,11 +119,11 @@ func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
 }
 
 type vxLanStats struct {
-	Vni            int
+	Vni            uint32
 	VxlanType      string `json:"type"`
 	VxlanIf        string
-	NumMacs        float64
-	NumArpNd       float64
+	NumMacs        uint32
+	NumArpNd       uint32
 	NumRemoteVteps interface{} // it's possible for the numRemoteVteps field to contain non-int values such as "n\/a"
 	TenantVrf      string
 }
@@ -135,9 +135,9 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 	}
 
 	for _, vxLanStat := range jsonMap {
-		bgpL2vpnLabels := []string{strconv.Itoa(vxLanStat.Vni), vxLanStat.VxlanType, vxLanStat.VxlanIf, vxLanStat.TenantVrf}
-		newGauge(ch, bgpL2vpnDesc["numMacs"], vxLanStat.NumMacs, bgpL2vpnLabels...)
-		newGauge(ch, bgpL2vpnDesc["numArpNd"], vxLanStat.NumArpNd, bgpL2vpnLabels...)
+		bgpL2vpnLabels := []string{strconv.FormatUint(uint64(vxLanStat.Vni), 10), vxLanStat.VxlanType, vxLanStat.VxlanIf, vxLanStat.TenantVrf}
+		newGauge(ch, bgpL2vpnDesc["numMacs"], float64(vxLanStat.NumMacs), bgpL2vpnLabels...)
+		newGauge(ch, bgpL2vpnDesc["numArpNd"], float64(vxLanStat.NumArpNd), bgpL2vpnLabels...)
 		remoteVteps, ok := vxLanStat.NumRemoteVteps.(float64)
 		if !ok {
 			remoteVteps = -1
@@ -188,20 +188,20 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	wgAdvertisedPrefixes := &sync.WaitGroup{}
 	for vrfName, vrfData := range jsonMap {
 		// The labels are "vrf", "afi",  "safi", "local_as"
-		localAs := strconv.FormatInt(vrfData.AS, 10)
+		localAs := strconv.FormatUint(uint64(vrfData.AS), 10)
 		procLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs}
 		// No point collecting metrics if no peers configured.
 		if vrfData.PeerCount != 0 {
-			newGauge(ch, bgpDesc["ribCount"], vrfData.RIBCount, procLabels...)
-			newGauge(ch, bgpDesc["ribMemory"], vrfData.RIBMemory, procLabels...)
-			newGauge(ch, bgpDesc["peerCount"], vrfData.PeerCount, procLabels...)
-			newGauge(ch, bgpDesc["peerMemory"], vrfData.PeerMemory, procLabels...)
-			newGauge(ch, bgpDesc["peerGroupCount"], vrfData.PeerGroupCount, procLabels...)
-			newGauge(ch, bgpDesc["peerGroupMemory"], vrfData.PeerGroupMemory, procLabels...)
+			newGauge(ch, bgpDesc["ribCount"], float64(vrfData.RIBCount), procLabels...)
+			newGauge(ch, bgpDesc["ribMemory"], float64(vrfData.RIBMemory), procLabels...)
+			newGauge(ch, bgpDesc["peerCount"], float64(vrfData.PeerCount), procLabels...)
+			newGauge(ch, bgpDesc["peerMemory"], float64(vrfData.PeerMemory), procLabels...)
+			newGauge(ch, bgpDesc["peerGroupCount"], float64(vrfData.PeerGroupCount), procLabels...)
+			newGauge(ch, bgpDesc["peerGroupMemory"], float64(vrfData.PeerGroupMemory), procLabels...)
 
 			for peerIP, peerData := range vrfData.Peers {
 				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
-				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatInt(peerData.RemoteAs, 10)}
+				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatUint(uint64(peerData.RemoteAs), 10)}
 
 				if *bgpPeerDescs {
 					d := ""
@@ -216,22 +216,22 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 
 				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
 				if peerData.PfxSnt != nil {
-					newGauge(ch, bgpDesc["prefixAdvertisedCount"], *peerData.PfxSnt, peerLabels...)
+					newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(*peerData.PfxSnt), peerLabels...)
 				} else if *bgpAdvertisedPrefixes {
 					wgAdvertisedPrefixes.Add(1)
 					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, logger, bgpDesc, peerLabels...)
 				}
 
-				newCounter(ch, bgpDesc["msgRcvd"], peerData.MsgRcvd, peerLabels...)
-				newCounter(ch, bgpDesc["msgSent"], peerData.MsgSent, peerLabels...)
-				newGauge(ch, bgpDesc["UptimeSec"], peerData.PeerUptimeMsec*0.001, peerLabels...)
+				newCounter(ch, bgpDesc["msgRcvd"], float64(peerData.MsgRcvd), peerLabels...)
+				newCounter(ch, bgpDesc["msgSent"], float64(peerData.MsgSent), peerLabels...)
+				newGauge(ch, bgpDesc["UptimeSec"], float64(peerData.PeerUptimeMsec)*0.001, peerLabels...)
 
 				// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of recieved prefixes, but in later versions it was changed to PfxRcd.
 				prefixReceived := 0.0
 				if peerData.PrefixReceivedCount != 0 {
-					prefixReceived = peerData.PrefixReceivedCount
+					prefixReceived = float64(peerData.PrefixReceivedCount)
 				} else if peerData.PfxRcd != 0 {
-					prefixReceived = peerData.PfxRcd
+					prefixReceived = float64(peerData.PfxRcd)
 				}
 				newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
 
@@ -295,33 +295,33 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 		return
 	}
 
-	newGauge(ch, bgpDesc["prefixAdvertisedCount"], advertisedPrefixes.TotalPrefixCounter, peerLabels...)
+	newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(advertisedPrefixes.TotalPrefixCounter), peerLabels...)
 }
 
 type bgpProcess struct {
 	RouterID        string
-	AS              int64
-	RIBCount        float64
-	RIBMemory       float64
-	PeerCount       float64
-	PeerMemory      float64
-	PeerGroupCount  float64
-	PeerGroupMemory float64
+	AS              uint32
+	RIBCount        uint32
+	RIBMemory       uint32
+	PeerCount       uint32
+	PeerMemory      uint32
+	PeerGroupCount  uint32
+	PeerGroupMemory uint32
 	Peers           map[string]*bgpPeerSession
 }
 
 type bgpPeerSession struct {
 	State               string
-	RemoteAs            int64
-	MsgRcvd             float64
-	MsgSent             float64
-	PeerUptimeMsec      float64
-	PrefixReceivedCount float64
-	PfxRcd              float64
-	PfxSnt              *float64
+	RemoteAs            uint32
+	MsgRcvd             uint32
+	MsgSent             uint32
+	PeerUptimeMsec      uint32
+	PrefixReceivedCount uint32
+	PfxRcd              uint32
+	PfxSnt              *uint32
 }
 type bgpAdvertisedRoutes struct {
-	TotalPrefixCounter float64 `json:"totalPrefixCounter"`
+	TotalPrefixCounter uint32 `json:"totalPrefixCounter"`
 }
 
 // Returns:
