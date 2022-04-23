@@ -79,16 +79,16 @@ type bfdPeer struct {
 	Peer                   string `json:"peer"`
 	Local                  string `json:"local"`
 	Vrf                    string `json:"vrf"`
-	ID                     int    `json:"id"`
-	RemoteID               int    `json:"remote-id"`
+	ID                     uint32 `json:"id"`
+	RemoteID               uint32 `json:"remote-id"`
 	Status                 string `json:"status"`
-	Uptime                 int    `json:"uptime"`
+	Uptime                 uint32 `json:"uptime"`
 	Diagnostic             string `json:"diagnostic"`
 	RemoteDiagnostic       string `json:"remote-diagnostic"`
-	ReceiveInterval        int    `json:"receive-interval"`
-	TransmitInterval       int    `json:"transmit-interval"`
-	EchoInterval           int    `json:"echo-interval"`
-	RemoteReceiveInterval  int    `json:"remote-receive-interval"`
-	RemoteTransmitInterval int    `json:"remote-transmit-interval"`
-	RemoteEchoInterval     int    `json:"remote-echo-interval"`
+	ReceiveInterval        uint32 `json:"receive-interval"`
+	TransmitInterval       uint32 `json:"transmit-interval"`
+	EchoInterval           uint32 `json:"echo-interval"`
+	RemoteReceiveInterval  uint32 `json:"remote-receive-interval"`
+	RemoteTransmitInterval uint32 `json:"remote-transmit-interval"`
+	RemoteEchoInterval     uint32 `json:"remote-echo-interval"`
 }

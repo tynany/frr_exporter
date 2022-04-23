@@ -153,13 +153,13 @@ func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, 
 	if instanceID != 0 {
 		labels = append(labels, strconv.Itoa(instanceID))
 	}
-	newGauge(ch, ospfDesc["ospfIfaceNeigh"], iface.NbrCount, labels...)
-	newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], iface.NbrAdjacentCount, labels...)
+	newGauge(ch, ospfDesc["ospfIfaceNeigh"], float64(iface.NbrCount), labels...)
+	newGauge(ch, ospfDesc["ospfIfaceNeighAdj"], float64(iface.NbrAdjacentCount), labels...)
 }
 
 type ospfIface struct {
-	NbrCount          float64
-	NbrAdjacentCount  float64
+	NbrCount          uint32
+	NbrAdjacentCount  uint32
 	Area              string
 	TimerPassiveIface bool
 }
