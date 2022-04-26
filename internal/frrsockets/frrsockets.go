@@ -33,12 +33,12 @@ func (c Connection) ExecPIMCmd(cmd string) ([]byte, error) {
 	return executeCmd(filepath.Clean(c.dirPath+"/pimd.vty"), cmd, c.timeout)
 }
 
-func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/zebra.vty"), cmd, c.timeout)
-}
-
 func (c Connection) ExecVRRPCmd(cmd string) ([]byte, error) {
 	return executeCmd(filepath.Clean(c.dirPath+"/vrrpd.vty"), cmd, c.timeout)
+}
+
+func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
+	return executeCmd(filepath.Clean(c.dirPath+"/zebra.vty"), cmd, c.timeout)
 }
 
 func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
@@ -49,6 +49,12 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 	if err != nil {
 		return buf.Bytes(), err
 	}
+	defer func(conn *net.UnixConn) {
+		err := conn.Close()
+		if err != nil {
+			// ignored
+		}
+	}(conn)
 
 	if err = conn.SetDeadline(time.Now().Add(timeout)); err != nil {
 		return buf.Bytes(), err
@@ -69,7 +75,6 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 		// frr signals the end of a response with \x00
 		if bytes.HasSuffix(b, []byte("\x00")) {
 			buf.Write(bytes.Trim(b, "\x00"))
-			conn.Close()
 			return buf.Bytes(), nil
 		}
 		buf.Write(b)
