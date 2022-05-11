@@ -50,10 +50,7 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 		return buf.Bytes(), err
 	}
 	defer func(conn *net.UnixConn) {
-		err := conn.Close()
-		if err != nil {
-			// ignored
-		}
+		_ = conn.Close()
 	}(conn)
 
 	if err = conn.SetDeadline(time.Now().Add(timeout)); err != nil {
