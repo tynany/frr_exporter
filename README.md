@@ -230,6 +230,14 @@ cd ${GOPATH}/src/github.com/prometheus/frr_exporter
 go build
 ```
 
+This project uses https://golangci-lint.run in GitHub Actions. You can lint your code locally
+before submitting a PR by following the installation instructions at 
+https://golangci-lint.run/usage/install/ and run prior to submitting changes:
+
+```
+golangci-lint run 
+```
+
 ## TODO
 
  - Collector and main tests
