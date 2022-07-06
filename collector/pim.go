@@ -84,8 +84,8 @@ func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, l
 	return nil
 }
 
-func parseHMS(st string) (int, error) {
-	var h, m, s int
+func parseHMS(st string) (uint64, error) {
+	var h, m, s uint64
 	n, err := fmt.Sscanf(st, "%d:%d:%d", &h, &m, &s)
 	if err != nil || n != 3 {
 		return 0, err
