@@ -315,7 +315,7 @@ type bgpPeerSession struct {
 	RemoteAs            uint32
 	MsgRcvd             uint32
 	MsgSent             uint32
-	PeerUptimeMsec      uint32
+	PeerUptimeMsec      uint64
 	PrefixReceivedCount uint32
 	PfxRcd              uint32
 	PfxSnt              *uint32

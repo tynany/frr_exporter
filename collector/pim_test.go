@@ -62,7 +62,7 @@ var (
 	}
 	parseHMStests = []struct {
 		in  string
-		out int
+		out uint64
 	}{
 		{"03:45:43", 13543},
 		{"00:04:01", 241},

@@ -82,7 +82,7 @@ type bfdPeer struct {
 	ID                     uint32 `json:"id"`
 	RemoteID               uint32 `json:"remote-id"`
 	Status                 string `json:"status"`
-	Uptime                 uint32 `json:"uptime"`
+	Uptime                 uint64 `json:"uptime"`
 	Diagnostic             string `json:"diagnostic"`
 	RemoteDiagnostic       string `json:"remote-diagnostic"`
 	ReceiveInterval        uint32 `json:"receive-interval"`
