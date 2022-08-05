@@ -1,4 +1,4 @@
-name: bandersnatch_docker_upload
+name: frr_exporter_docker_upload
 
 on:
   push:
