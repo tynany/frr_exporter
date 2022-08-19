@@ -174,8 +174,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		return err
 	}
 
-	var peerDescJSON map[string]map[string]string
-	var peerDescText map[string]string
+	var peerDescJSON map[string]map[string]map[string]string
+	var peerDescText map[string]map[string]string
 	var err error
 	if *bgpPeerTypes || *bgpPeerDescs {
 		peerDescJSON, peerDescText, err = getBGPPeerDesc(logger)
@@ -206,9 +206,9 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 				if *bgpPeerDescs {
 					d := ""
 					if *bgpPeerDescsText {
-						d = peerDescText[peerIP]
+						d = peerDescText[vrfName][peerIP]
 					} else {
-						d = peerDescJSON[peerIP]["desc"]
+						d = peerDescJSON[vrfName][peerIP]["desc"]
 					}
 					// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
 					peerLabels = append(peerLabels, d)
@@ -237,9 +237,9 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 
 				if *bgpPeerTypes {
 					for _, descKey := range *frrBGPDescKey {
-						if peerDescJSON[peerIP][descKey] != "" {
-							if _, exist := peerTypes[strings.TrimSpace(peerDescJSON[peerIP][descKey])]; !exist {
-								peerTypes[strings.TrimSpace(peerDescJSON[peerIP][descKey])] = 0
+						if peerDescJSON[vrfName][peerIP][descKey] != "" {
+							if _, exist := peerTypes[strings.TrimSpace(peerDescJSON[vrfName][peerIP][descKey])]; !exist {
+								peerTypes[strings.TrimSpace(peerDescJSON[vrfName][peerIP][descKey])] = 0
 							}
 						}
 					}
@@ -250,8 +250,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					peerState = 1
 					if *bgpPeerTypes {
 						for _, descKey := range *frrBGPDescKey {
-							if peerDescJSON[peerIP][descKey] != "" {
-								peerTypes[strings.TrimSpace(peerDescJSON[peerIP][descKey])]++
+							if peerDescJSON[vrfName][peerIP][descKey] != "" {
+								peerTypes[strings.TrimSpace(peerDescJSON[vrfName][peerIP][descKey])]++
 							}
 						}
 					}
@@ -328,29 +328,88 @@ type bgpAdvertisedRoutes struct {
 //  - Map from JSON formatted BGP peer descriptions
 //  - Plain text description of peers
 //  - Error
-func getBGPPeerDesc(logger log.Logger) (map[string]map[string]string, map[string]string, error) {
-	descJSON := make(map[string]map[string]string)
-	descText := make(map[string]string)
+func getBGPPeerDesc(logger log.Logger) (map[string]map[string]map[string]string, map[string]map[string]string, error) {
 
-	output, err := executeBGPCommand("show bgp neighbors json")
+	output, err := executeBGPCommand("show bgp vrf all neighbors json")
 	if err != nil {
 		return nil, nil, err
 	}
+	return processBGPPeerDesc(logger, output)
+}
 
-	var neighbors map[string]bgpBGPNeighbor
-	if err := json.Unmarshal(output, &neighbors); err != nil {
+func processBGPPeerDesc(logger log.Logger, output []byte) (map[string]map[string]map[string]string, map[string]map[string]string, error) {
+
+	// Expected map format: map["vrf"]["peer IP"]["json desc field"]["json desc value"]
+	descJSON := make(map[string]map[string]map[string]string)
+
+	// Expected map format: map["vrf"]["peer IP"]["text desc"]
+	descText := make(map[string]map[string]string)
+
+	// Unfortunately, the 'show bgp vrf all neighbors json' output is poorly structured -- neighbors are
+	// fields on the same level of the vrfName and vrfId field. As such, loop through each key and apply
+	// logic to determine whether the key is a neighbor.
+	//
+	// Example:
+	// {
+	//    "default":{
+	//      "vrfId":-1,
+	//      "vrfName":"default",
+	//      "swp2":{
+	// 	      "nbrDesc":"desc"
+	//       },
+	//      "10.189.0.178":{
+	// 	      "nbrDesc":"desc"
+	//      }
+	//    },
+	//    "vrf1":{
+	//      "vrfId":-1,
+	//      "vrfName":"vrf1",
+	//      "swp1":{
+	// 	      "nbrDesc":"desc"
+	//      }
+	//    }
+	// }
+	var jsonMap map[string]json.RawMessage
+	if err := json.Unmarshal(output, &jsonMap); err != nil {
 		return nil, nil, err
 	}
-	for neighbor, data := range neighbors {
-		if !*bgpPeerDescsText {
-			var peerDesc map[string]string
-			if err := json.Unmarshal([]byte(data.NbrDesc), &peerDesc); err != nil {
-				// Don't return an error as unmarshalling is best effort.
-				level.Error(logger).Log("msg", "cannot unmarshall bgp description", "description", data.NbrDesc, "neighbor", neighbor, "err", err)
-			}
-			descJSON[neighbor] = peerDesc
+
+	for vrfName, vrfData := range jsonMap {
+		var vrfFields map[string]json.RawMessage
+
+		if err := json.Unmarshal(vrfData, &vrfFields); err != nil {
+			return nil, nil, err
 		}
-		descText[neighbor] = data.NbrDesc
+
+		for neighbor, neighborValues := range vrfFields {
+			switch neighbor {
+			case "vrfName", "vrfId":
+				// Do nothing as we do not need the value of these fields.
+			default:
+				// All other fields are neighbors.
+				var neighborData bgpBGPNeighbor
+				if err := json.Unmarshal(neighborValues, &neighborData); err != nil {
+					return nil, nil, err
+				}
+
+				if !*bgpPeerDescsText {
+
+					var peerDesc map[string]string
+					if err := json.Unmarshal([]byte(neighborData.NbrDesc), &peerDesc); err != nil {
+						// Don't return an error as unmarshalling is best effort.
+						level.Error(logger).Log("msg", "cannot unmarshall bgp description", "description", neighborData.NbrDesc, "neighbor", neighbor, "err", err)
+					}
+					if _, exists := descJSON[vrfName]; !exists {
+						descJSON[vrfName] = make(map[string]map[string]string)
+					}
+					descJSON[vrfName][neighbor] = peerDesc
+				}
+				if _, exists := descText[vrfName]; !exists {
+					descText[vrfName] = make(map[string]string)
+				}
+				descText[vrfName][neighbor] = neighborData.NbrDesc
+			}
+		}
 	}
 	return descJSON, descText, nil
 }
