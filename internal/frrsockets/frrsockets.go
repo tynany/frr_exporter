@@ -18,27 +18,27 @@ func NewConnection(dirPath string, timeout time.Duration) *Connection {
 }
 
 func (c Connection) ExecBGPCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/bgpd.vty"), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, "bgpd.vty"), cmd, c.timeout)
 }
 
 func (c Connection) ExecOSPFCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/ospfd.vty"), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, "ospfd.vty"), cmd, c.timeout)
 }
 
 func (c Connection) ExecOSPFMultiInstanceCmd(cmd string, instanceID int) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+fmt.Sprintf("/ospfd-%d.vty", instanceID)), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, fmt.Sprintf("ospfd-%d.vty", instanceID)), cmd, c.timeout)
 }
 
 func (c Connection) ExecPIMCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/pimd.vty"), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, "pimd.vty"), cmd, c.timeout)
 }
 
 func (c Connection) ExecVRRPCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/vrrpd.vty"), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, "vrrpd.vty"), cmd, c.timeout)
 }
 
 func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
-	return executeCmd(filepath.Clean(c.dirPath+"/zebra.vty"), cmd, c.timeout)
+	return executeCmd(filepath.Join(c.dirPath, "zebra.vty"), cmd, c.timeout)
 }
 
 func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
