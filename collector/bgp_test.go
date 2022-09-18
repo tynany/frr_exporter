@@ -445,7 +445,7 @@ func TestProcessBGPPeerDesc(t *testing.T) {
 	expectedTextOutput["vrf1"] = make(map[string]string)
 	expectedTextOutput["vrf1"]["10.2.0.1"] = "{\"desc\":\"remote\"}"
 
-	descJSON, descText, err := processBGPPeerDesc(nil, bgpNeighborDesc)
+	descJSON, descText, err := processBGPPeerDesc(nil, bgpNeighborDesc, "")
 	if err != nil {
 		t.Errorf("error calling processBGPPeerDesc: %s", err)
 	}

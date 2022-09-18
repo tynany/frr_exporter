@@ -329,15 +329,15 @@ type bgpAdvertisedRoutes struct {
 //  - Plain text description of peers
 //  - Error
 func getBGPPeerDesc(logger log.Logger) (map[string]map[string]map[string]string, map[string]map[string]string, error) {
-
+	cmd := "show bgp vrf all neighbors json"
 	output, err := executeBGPCommand("show bgp vrf all neighbors json")
 	if err != nil {
 		return nil, nil, err
 	}
-	return processBGPPeerDesc(logger, output)
+	return processBGPPeerDesc(logger, output, cmd)
 }
 
-func processBGPPeerDesc(logger log.Logger, output []byte) (map[string]map[string]map[string]string, map[string]map[string]string, error) {
+func processBGPPeerDesc(logger log.Logger, output []byte, cmd string) (map[string]map[string]map[string]string, map[string]map[string]string, error) {
 
 	// Expected map format: map["vrf"]["peer IP"]["json desc field"]["json desc value"]
 	descJSON := make(map[string]map[string]map[string]string)
@@ -371,6 +371,7 @@ func processBGPPeerDesc(logger log.Logger, output []byte) (map[string]map[string
 	// }
 	var jsonMap map[string]json.RawMessage
 	if err := json.Unmarshal(output, &jsonMap); err != nil {
+		level.Error(logger).Log("msg", "cannot unmarshal bgp neighbors", "command", cmd, "command output", string(output), "err", err)
 		return nil, nil, err
 	}
 
@@ -378,6 +379,7 @@ func processBGPPeerDesc(logger log.Logger, output []byte) (map[string]map[string
 		var vrfFields map[string]json.RawMessage
 
 		if err := json.Unmarshal(vrfData, &vrfFields); err != nil {
+			level.Error(logger).Log("msg", "cannot unmarshal bgp neighbors vrf data", "data", string(vrfData), "command", cmd, "command output", string(output), "err", err)
 			return nil, nil, err
 		}
 
@@ -389,6 +391,7 @@ func processBGPPeerDesc(logger log.Logger, output []byte) (map[string]map[string
 				// All other fields are neighbors.
 				var neighborData bgpBGPNeighbor
 				if err := json.Unmarshal(neighborValues, &neighborData); err != nil {
+					level.Error(logger).Log("msg", "cannot unmarshal bgp neighbors bgp neighbor data", "data", string(neighborValues), "command", cmd, "command output", string(output), "err", err)
 					return nil, nil, err
 				}
 
