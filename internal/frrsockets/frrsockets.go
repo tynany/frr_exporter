@@ -42,38 +42,36 @@ func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
 }
 
 func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
-	var buf bytes.Buffer
-	addr := net.UnixAddr{Name: socketPath, Net: "unix"}
+	var response bytes.Buffer
 
-	conn, err := net.DialUnix("unix", nil, &addr)
+	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Net: "unix", Name: socketPath})
 	if err != nil {
-		return buf.Bytes(), err
+		return nil, err
 	}
-	defer func(conn *net.UnixConn) {
-		_ = conn.Close()
-	}(conn)
+	defer conn.Close()
 
 	if err = conn.SetDeadline(time.Now().Add(timeout)); err != nil {
-		return buf.Bytes(), err
+		return nil, err
 	}
 
-	// frr sockets expect each command to end with \0
-	_, err = conn.Write([]byte(fmt.Sprintf("%s\000", cmd)))
-	if err != nil {
-		return buf.Bytes(), err
+	// frr vty sockets expect command to be null-terminated
+	if _, err = conn.Write([]byte(cmd + "\x00")); err != nil {
+		return nil, err
 	}
+
+	buf := make([]byte, 4096)
 
 	for {
-		b := make([]byte, 1024)
-		_, err := conn.Read(b)
+		n, err := conn.Read(buf)
 		if err != nil {
-			return buf.Bytes(), err
+			return response.Bytes(), err
 		}
-		// frr signals the end of a response with \x00
-		if bytes.HasSuffix(b, []byte("\x00")) {
-			buf.Write(bytes.Trim(b, "\x00"))
-			return buf.Bytes(), nil
+
+		response.Write(buf[:n])
+
+		// frr signals the end of a response with a null character
+		if buf[n] == 0 {
+			return bytes.TrimRight(response.Bytes(), "\x00"), nil
 		}
-		buf.Write(b)
 	}
 }
