@@ -32,7 +32,7 @@ func TestExecuteCmd(t *testing.T) {
 			panic(err)
 		}
 
-		conn.Write([]byte(expected + "\x00"))
+		_, _ = conn.Write([]byte(expected + "\x00"))
 	}()
 
 	// Allow socket listener goroutine to settle
