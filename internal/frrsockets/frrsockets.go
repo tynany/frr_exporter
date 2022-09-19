@@ -60,7 +60,6 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 	}
 
 	buf := make([]byte, 4096)
-
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -70,7 +69,7 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 		response.Write(buf[:n])
 
 		// frr signals the end of a response with a null character
-		if buf[n] == 0 {
+		if n > 0 && buf[n-1] == 0 {
 			return bytes.TrimRight(response.Bytes(), "\x00"), nil
 		}
 	}
