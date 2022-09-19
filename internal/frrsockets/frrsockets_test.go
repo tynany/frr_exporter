@@ -1,11 +1,10 @@
 package frrsockets
 
 import (
-	"bytes"
-	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,8 +32,8 @@ func TestExecuteCmdWithLargeOutput(t *testing.T) {
 	socketPath := filepath.Join(os.TempDir(), "bgp_mock.vty")
 
 	command := "show a whole lot of data"
+	expected := strings.Repeat("z", 5000)
 
-	expected := generateRandomString(5000)
 	go mockSocket(socketPath, expected)
 
 	// Allow socket listener goroutine to settle
@@ -73,14 +72,4 @@ func mockSocket(socketPath string, socketData string) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func generateRandomString(length int) string {
-	runes := []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	buf := bytes.Buffer{}
-	buf.Grow(length)
-	for i := 0; i < length; i++ {
-		buf.WriteRune(runes[rand.Intn(len(runes))])
-	}
-	return buf.String()
 }
