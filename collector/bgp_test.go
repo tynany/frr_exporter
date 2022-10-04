@@ -428,35 +428,30 @@ func TestProcessBgpL2vpnEvpnSummary(t *testing.T) {
 }
 
 func TestProcessBGPPeerDesc(t *testing.T) {
-	expectedJSONOutput := make(map[string]map[string]map[string]string)
-	expectedJSONOutput["default"] = make(map[string]map[string]string)
-	expectedJSONOutput["default"]["10.1.1.10"] = make(map[string]string)
-	expectedJSONOutput["default"]["10.1.1.10"]["desc"] = "rt1"
-	expectedJSONOutput["default"]["swp2"] = make(map[string]string)
-	expectedJSONOutput["default"]["swp2"]["desc"] = "fw1"
-	expectedJSONOutput["vrf1"] = make(map[string]map[string]string)
-	expectedJSONOutput["vrf1"]["10.2.0.1"] = make(map[string]string)
-	expectedJSONOutput["vrf1"]["10.2.0.1"]["desc"] = "remote"
+	expectedOutput := map[string]bgpVRF{
+		"default": {
+			ID:   0,
+			Name: "default",
+			BGPNeighbors: map[string]bgpNeighbor{
+				"10.1.1.10": {Desc: "{\"desc\":\"rt1\"}"},
+				"swp2":      {Desc: "{\"desc\":\"fw1\"}"},
+			},
+		},
+		"vrf1": {
+			ID:   -1,
+			Name: "vrf1",
+			BGPNeighbors: map[string]bgpNeighbor{
+				"10.2.0.1": {Desc: "{\"desc\":\"remote\"}"},
+			},
+		},
+	}
 
-	expectedTextOutput := make(map[string]map[string]string)
-	expectedTextOutput["default"] = make(map[string]string)
-	expectedTextOutput["default"]["10.1.1.10"] = "{\"desc\":\"rt1\"}"
-	expectedTextOutput["default"]["swp2"] = "{\"desc\":\"fw1\"}"
-	expectedTextOutput["vrf1"] = make(map[string]string)
-	expectedTextOutput["vrf1"]["10.2.0.1"] = "{\"desc\":\"remote\"}"
-
-	descJSON, descText, err := processBGPPeerDesc(nil, bgpNeighborDesc)
+	peerDesc, err := processBGPPeerDesc(bgpNeighborDesc)
 	if err != nil {
 		t.Errorf("error calling processBGPPeerDesc: %s", err)
 	}
 
-	textEq := reflect.DeepEqual(descText, expectedTextOutput)
-	if !textEq {
-		t.Errorf("error comparing bgp neighbor description text output: %s does not match expected %s", descText, expectedTextOutput)
-	}
-
-	jsonEq := reflect.DeepEqual(descJSON, expectedJSONOutput)
-	if !jsonEq {
-		t.Errorf("error comparing bgp neighbor description JSON output: %s does not match expected %s", descJSON, expectedJSONOutput)
+	if !reflect.DeepEqual(peerDesc, expectedOutput) {
+		t.Errorf("error comparing bgp neighbor description output: %v does not match expected %v", peerDesc, expectedOutput)
 	}
 }
