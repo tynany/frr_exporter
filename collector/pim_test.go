@@ -11,47 +11,6 @@ import (
 )
 
 var (
-	pimNeighborOutput = []byte(`{  "red": {
-		"red":{
-		},
-		"eth2":{
-		  "192.0.2.227":{
-			"interface":"eth2",
-			"neighbor":"192.0.2.227",
-			"upTime":"03:45:43",
-			"holdTime":"00:01:43",
-			"holdTimeMax":105,
-			"drPriority":1
-		  }
-		}
-	  }
-	  ,  "blue": {
-		"blue":{
-		},
-		"eth1":{
-		  "192.0.2.45":{
-			"interface":"eth1",
-			"neighbor":"192.0.2.45",
-			"upTime":"03:45:45",
-			"holdTime":"00:01:34",
-			"holdTimeMax":105,
-			"drPriority":1
-		  }
-		}
-	  }
-	  ,  "default": {
-		"eth0":{
-		  "192.0.2.99":{
-			"interface":"eth1",
-			"neighbor":"192.0.2.99",
-			"upTime":"00:45:45",
-			"holdTime":"00:02:34",
-			"holdTimeMax":105,
-			"drPriority":1
-		  }
-		}
-	  }
-	}`)
 	expectedPIMMetrics = map[string]float64{
 		"frr_pim_neighbor_uptime_seconds{iface=eth2,neighbor=192.0.2.227,vrf=red}":    13543,
 		"frr_pim_neighbor_uptime_seconds{iface=eth1,neighbor=192.0.2.45,vrf=blue}":    13545,
@@ -72,7 +31,7 @@ var (
 
 func TestProcessPIMNeighbors(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processPIMNeighbors(ch, pimNeighborOutput, nil, getPIMDesc()); err != nil {
+	if err := processPIMNeighbors(ch, readTestFixture(t, "show_ip_pim_vrf_all_neighbor.json"), nil, getPIMDesc()); err != nil {
 		t.Errorf("error calling processPIMNeighbors: %s", err)
 	}
 	close(ch)
