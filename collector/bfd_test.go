@@ -11,63 +11,6 @@ import (
 )
 
 var (
-	bfdPeers = []byte(`[
-		{
-			"multihop": false,
-			"peer": "10.10.141.61",
-			"local": "10.10.141.81",
-			"vrf": "default",
-			"id": 869087474,
-			"remote-id": 533345668,
-			"status": "up",
-			"uptime": 847716,
-			"diagnostic": "ok",
-			"remote-diagnostic": "ok",
-			"receive-interval": 300,
-			"transmit-interval": 300,
-			"echo-interval": 0,
-			"remote-receive-interval": 300,
-			"remote-transmit-interval": 300,
-			"remote-echo-interval": 300
-		},
-		{
-			"multihop": false,
-			"peer": "10.10.141.62",
-			"local": "10.10.141.81",
-			"vrf": "default",
-			"id": 2809641312,
-			"remote-id": 3617154307,
-			"status": "up",
-			"uptime": 847595,
-			"diagnostic": "ok",
-			"remote-diagnostic": "ok",
-			"receive-interval": 300,
-			"transmit-interval": 300,
-			"echo-interval": 0,
-			"remote-receive-interval": 300,
-			"remote-transmit-interval": 300,
-			"remote-echo-interval": 300
-		},
-		{
-			"multihop": false,
-			"peer": "10.10.141.63",
-			"local": "10.10.141.81",
-			"vrf": "default",
-			"id": 2809641312,
-			"remote-id": 3617154307,
-			"status": "down",
-			"uptime": 847888,
-			"diagnostic": "ok",
-			"remote-diagnostic": "ok",
-			"receive-interval": 300,
-			"transmit-interval": 300,
-			"echo-interval": 0,
-			"remote-receive-interval": 300,
-			"remote-transmit-interval": 300,
-			"remote-echo-interval": 300
-		}
-	]
-`)
 	expectedBFDMetrics = map[string]float64{
 		"frr_bfd_peer_count{}": 3,
 		"frr_bfd_peer_uptime{local=10.10.141.81,peer=10.10.141.61}": 847716,
@@ -81,7 +24,7 @@ var (
 
 func TestProcessBFDPeers(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBFDPeers(ch, bfdPeers, getBFDDesc()); err != nil {
+	if err := processBFDPeers(ch, readTestFixture(t, "show_bfd_peers.json"), getBFDDesc()); err != nil {
 		t.Errorf("error calling processBFDPeers ipv4unicast: %s", err)
 	}
 	close(ch)
