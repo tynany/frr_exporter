@@ -12,260 +12,6 @@ import (
 )
 
 var (
-	bgpNeighborDesc = []byte(`{
-   "default":{
-      "vrfId":0,
-      "vrfName":"default",
-      "swp2":{
-         "nbrDesc":"{\"desc\":\"fw1\"}"
-      },
-      "10.1.1.10":{
-         "nbrDesc":"{\"desc\":\"rt1\"}"
-      }
-   },
-   "vrf1":{
-      "vrfId":-1,
-      "vrfName":"vrf1",
-      "10.2.0.1":{
-         "nbrDesc":"{\"desc\":\"remote\"}"
-      }
-   }
-}`)
-	bgpSumV4Unicast = []byte(`{
-"default":{
-  "routerId":"192.168.0.1",
-  "as":64512,
-  "vrfId":0,
-  "vrfName":"default",
-  "tableVersion":0,
-  "ribCount":1,
-  "ribMemory":64,
-  "peerCount":2,
-  "peerMemory":39936,
-  "peers":{
-    "192.168.0.2":{
-      "remoteAs":64513,
-      "version":4,
-      "msgRcvd":100,
-      "msgSent":100,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"10000",
-      "peerUptimeMsec":10000,
-      "prefixReceivedCount":0,
-      "state":"Established",
-      "idType":"ipv4"
-    },
-    "192.168.0.3":{
-      "remoteAs":64514,
-      "version":4,
-      "msgRcvd":0,
-      "msgSent":0,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"never",
-      "peerUptimeMsec":0,
-      "pfxRcd":2,
-      "state":"Active",
-      "idType":"ipv4"
-    },
-    "192.168.0.4":{
-      "remoteAs":64515,
-      "version":4,
-      "msgRcvd":0,
-      "msgSent":0,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"never",
-      "peerUptimeMsec":0,
-      "pfxRcd":2,
-      "state":"Idle (Admin)",
-      "idType":"ipv4"
-    }
-  },
-  "totalPeers":2,
-  "dynamicPeers":0,
-  "bestPath":{
-    "multiPathRelax":"false"
-  }
-}
-,
-"red":{
-  "routerId":"192.168.1.1",
-  "as":64612,
-  "vrfId":39,
-  "vrfName":"red",
-  "tableVersion":0,
-  "ribCount":0,
-  "ribMemory":0,
-  "peerCount":2,
-  "peerMemory":39936,
-  "peers":{
-    "192.168.1.2":{
-      "remoteAs":64613,
-      "version":4,
-      "msgRcvd":100,
-      "msgSent":100,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"10000",
-      "peerUptimeMsec":20000,
-      "prefixReceivedCount":2,
-      "state":"Established",
-      "idType":"ipv4"
-    },
-    "192.168.1.3":{
-      "remoteAs":64614,
-      "version":4,
-      "msgRcvd":200,
-      "msgSent":200,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"never",
-      "peerUptimeMsec":0,
-      "prefixReceivedCount":0,
-      "state":"Active",
-      "idType":"ipv4"
-    }
-  },
-  "totalPeers":2,
-  "dynamicPeers":0,
-  "bestPath":{
-    "multiPathRelax":"false"
-  }
-}
-}
-`)
-
-	bgpSumV6Unicast = []byte(`{
-"default":{
-  "routerId":"192.168.0.1",
-  "as":64512,
-  "vrfId":0,
-  "vrfName":"default",
-  "tableVersion":6,
-  "ribCount":3,
-  "ribMemory":456,
-  "peerCount":2,
-  "peerMemory":59904,
-  "peers":{
-    "fd00::1":{
-      "remoteAs":64513,
-      "version":4,
-      "msgRcvd":29285,
-      "msgSent":29285,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"1d00h24m",
-      "peerUptimeMsec":8465643000000,
-      "prefixReceivedCount":1,
-      "state":"Established",
-      "idType":"ipv6"
-    },
-    "fd00::5":{
-      "remoteAs":64514,
-      "version":4,
-      "msgRcvd":0,
-      "msgSent":0,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"never",
-      "peerUptimeMsec":0,
-      "prefixReceivedCount":0,
-      "state":"Active",
-      "idType":"ipv6"
-      }
-  },
-  "totalPeers":2,
-  "dynamicPeers":0,
-  "bestPath":{
-    "multiPathRelax":"false"
-  }
-}
-,
-"red":{
-  "routerId":"192.168.1.1",
-  "as":64612,
-  "vrfId":0,
-  "vrfName":"default",
-  "tableVersion":6,
-  "ribCount":3,
-  "ribMemory":456,
-  "peerCount":2,
-  "peerMemory":59904,
-  "peers":{
-    "fd00::101":{
-      "remoteAs":64613,
-      "version":4,
-      "msgRcvd":29285,
-      "msgSent":29285,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"1d00h24m",
-      "peerUptimeMsec":87873000,
-      "prefixReceivedCount":1,
-      "state":"Established",
-      "idType":"ipv6"
-    },
-    "fd00::105":{
-      "remoteAs":64614,
-      "version":4,
-      "msgRcvd":0,
-      "msgSent":0,
-      "tableVersion":0,
-      "outq":0,
-      "inq":0,
-      "peerUptime":"never",
-      "peerUptimeMsec":0,
-      "prefixReceivedCount":0,
-      "state":"Active",
-      "idType":"ipv6"
-      }
-  },
-  "totalPeers":2,
-  "dynamicPeers":0,
-  "bestPath":{
-    "multiPathRelax":"false"
-  }
-}
-}
-`)
-
-	evpnVniJson = []byte(`
-    {
-  "174374":{
-    "vni":174374,
-    "type":"L2",
-    "vxlanIf":"ONTEP1_174374",
-    "numMacs":42,
-    "numArpNd":0,
-    "numRemoteVteps":1,
-    "tenantVrf":"default",
-    "remoteVteps":[
-      "10.0.0.13"
-    ]
-  },
-  "172192":{
-    "vni":172192,
-    "type":"L2",
-    "vxlanIf":"ONTEP1_172192",
-    "numMacs":0,
-    "numArpNd":23,
-    "numRemoteVteps":"n\/a",
-    "tenantVrf":"default",
-    "remoteVteps":[
-      "10.0.0.13"
-    ]
-  }
-  }`)
 	expectedBGPMetrics = map[string]float64{
 		"frr_bgp_peer_groups_count_total{afi=ipv4,local_as=64512,safi=unicast,vrf=default}":                                           0.0,
 		"frr_bgp_peer_groups_count_total{afi=ipv4,local_as=64612,safi=unicast,vrf=red}":                                               0.0,
@@ -404,10 +150,10 @@ func compareMetrics(t *testing.T, gotMetrics map[string]float64, expectedMetrics
 
 func TestProcessBGPSummary(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBGPSummary(ch, bgpSumV4Unicast, "ipv4", "unicast", nil, getBGPDesc()); err != nil {
+	if err := processBGPSummary(ch, readTestFixture(t, "show_bgp_vrf_all_ipv4_unicast_summary.json"), "ipv4", "unicast", nil, getBGPDesc()); err != nil {
 		t.Errorf("error calling processBGPSummary ipv4unicast: %s", err)
 	}
-	if err := processBGPSummary(ch, bgpSumV6Unicast, "ipv6", "unicast", nil, getBGPDesc()); err != nil {
+	if err := processBGPSummary(ch, readTestFixture(t, "show_bgp_vrf_all_ipv6_unicast_summary.json"), "ipv6", "unicast", nil, getBGPDesc()); err != nil {
 		t.Errorf("error calling processBGPSummary ipv6unicast: %s", err)
 	}
 	close(ch)
@@ -418,7 +164,7 @@ func TestProcessBGPSummary(t *testing.T) {
 
 func TestProcessBgpL2vpnEvpnSummary(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
-	if err := processBgpL2vpnEvpnSummary(ch, evpnVniJson, getBGPL2VPNDesc()); err != nil {
+	if err := processBgpL2vpnEvpnSummary(ch, readTestFixture(t, "show_evpn_vni.json"), getBGPL2VPNDesc()); err != nil {
 		t.Errorf("error calling processBgpL2vpnEvpnSummary: %s", err)
 	}
 	close(ch)
@@ -446,7 +192,7 @@ func TestProcessBGPPeerDesc(t *testing.T) {
 		},
 	}
 
-	peerDesc, err := processBGPPeerDesc(bgpNeighborDesc)
+	peerDesc, err := processBGPPeerDesc(readTestFixture(t, "show_bgp_vrf_all_neighbors.json"))
 	if err != nil {
 		t.Errorf("error calling processBGPPeerDesc: %s", err)
 	}
