@@ -78,7 +78,9 @@ func main() {
 	})
 
 	server := &http.Server{Addr: *listenAddress}
-	if err := web.ListenAndServe(server, *configFile, logger); err != nil {
+	webFlags := &web.FlagConfig{WebConfigFile: configFile}
+
+	if err := web.ListenAndServe(server, webFlags, logger); err != nil {
 		level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}
