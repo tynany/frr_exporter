@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/exporter-toolkit/web"
+	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/common/promlog"
@@ -20,9 +21,8 @@ import (
 )
 
 var (
-	listenAddress = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9342").String()
 	telemetryPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-	configFile    = kingpin.Flag("web.config", "[EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.").Default("").String()
+	webFlagConfig = kingpinflag.AddFlags(kingpin.CommandLine, ":9342")
 )
 
 func handler(logger log.Logger) http.Handler {
@@ -64,7 +64,7 @@ func main() {
 
 	level.Info(logger).Log("msg", "Starting frr_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Info(logger).Log("msg", "Listening on address", "address", *listenAddress)
+	level.Info(logger).Log("msg", "Listening on addresses", "addresses", webFlagConfig.WebListenAddresses)
 
 	http.Handle(*telemetryPath, handler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -77,10 +77,8 @@ func main() {
 			</html>`))
 	})
 
-	server := &http.Server{Addr: *listenAddress}
-	webFlags := &web.FlagConfig{WebConfigFile: configFile}
-
-	if err := web.ListenAndServe(server, webFlags, logger); err != nil {
+	server := &http.Server{}
+	if err := web.ListenAndServe(server, webFlagConfig, logger); err != nil {
 		level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}
