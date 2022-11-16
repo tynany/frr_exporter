@@ -64,7 +64,6 @@ func main() {
 
 	level.Info(logger).Log("msg", "Starting frr_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Info(logger).Log("msg", "Listening on addresses", "addresses", webFlagConfig.WebListenAddresses)
 
 	http.Handle(*telemetryPath, handler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
