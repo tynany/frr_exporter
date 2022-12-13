@@ -31,7 +31,6 @@ var (
 	frrDesc   = map[string]*prometheus.Desc{
 		"frrScrapeDuration": promDesc("scrape_duration_seconds", "Time it took for a collector's scrape to complete.", frrLabels),
 		"frrCollectorUp":    promDesc("collector_up", "Whether the collector's last scrape was successful (1 = successful, 0 = unsuccessful).", frrLabels),
-		"frrUp":             promDesc("up", "Whether FRR is currently up.", nil),
 	}
 
 	socketDirPath = kingpin.Flag("frr.socket.dir-path", "Path of of the localstatedir containing each daemon's Unix socket.").Default("/var/run/frr").String()
