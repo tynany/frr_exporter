@@ -19,6 +19,7 @@ var (
 	bgpPeerTypes          = kingpin.Flag("collector.bgp.peer-types", "Enable the frr_bgp_peer_types_up metric (default: disabled).").Default("False").Bool()
 	frrBGPDescKey         = kingpin.Flag("collector.bgp.peer-types.keys", "Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports multiple values (default: type).").Default("type").Strings()
 	bgpPeerDescs          = kingpin.Flag("collector.bgp.peer-descriptions", "Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
+	bgpPeerHostnames      = kingpin.Flag("collector.bgp.peer-hostnames", "Add the value of the hostname key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
 	bgpPeerDescsText      = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
 	bgpAdvertisedPrefixes = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
 )
@@ -47,7 +48,11 @@ func getBGPDesc() map[string]*prometheus.Desc {
 	bgpPeerLabels := append(bgpLabels, "peer", "peer_as")
 
 	if *bgpPeerDescs {
-		bgpPeerLabels = append(bgpLabels, "peer", "peer_as", "peer_desc")
+		bgpPeerLabels = append(bgpPeerLabels, "peer_desc")
+	}
+
+	if *bgpPeerHostnames {
+		bgpPeerLabels = append(bgpPeerLabels, "peer_hostname")
 	}
 
 	return map[string]*prometheus.Desc{
@@ -219,6 +224,10 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					}
 				}
 
+				if *bgpPeerHostnames {
+					peerLabels = append(peerLabels, peerData.Hostname)
+				}
+
 				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
 				if peerData.PfxSnt != nil {
 					newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(*peerData.PfxSnt), peerLabels...)
@@ -330,6 +339,7 @@ type bgpPeerSession struct {
 	PrefixReceivedCount uint32
 	PfxRcd              uint32
 	PfxSnt              *uint32
+	Hostname            string
 }
 type bgpAdvertisedRoutes struct {
 	TotalPrefixCounter uint32 `json:"totalPrefixCounter"`
