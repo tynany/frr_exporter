@@ -17,6 +17,10 @@ func NewConnection(dirPath string, timeout time.Duration) *Connection {
 	return &Connection{dirPath: dirPath, timeout: timeout}
 }
 
+func (c Connection) ExecBFDCmd(cmd string) ([]byte, error) {
+	return executeCmd(filepath.Join(c.dirPath, "bfdd.vty"), cmd, c.timeout)
+}
+
 func (c Connection) ExecBGPCmd(cmd string) ([]byte, error) {
 	return executeCmd(filepath.Join(c.dirPath, "bgpd.vty"), cmd, c.timeout)
 }
@@ -54,12 +58,22 @@ func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 		return nil, err
 	}
 
-	// frr vty sockets expect command to be null-terminated
+	buf := make([]byte, 4096)
+
+	// Mimic vtysh by switching to 'enable' mode first. Note that commands need to be
+	// null-terminated.
+	if _, err = conn.Write([]byte("enable\x00")); err != nil {
+		return nil, err
+	}
+	if _, err := conn.Read(buf); err != nil {
+		return nil, err
+	}
+
+	// Send desired command.
 	if _, err = conn.Write([]byte(cmd + "\x00")); err != nil {
 		return nil, err
 	}
 
-	buf := make([]byte, 4096)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {

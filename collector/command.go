@@ -18,6 +18,13 @@ var (
 	frrVTYSHOptions = kingpin.Flag("frr.vtysh.options", "Additional options passed to vtysh.").Default("").String()
 )
 
+func executeBFDCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand(cmd)
+	}
+	return socketConn.ExecBFDCmd(cmd)
+}
+
 func executeBGPCommand(cmd string) ([]byte, error) {
 	if *vtyshEnable {
 		return execVtyshCommand(cmd)
@@ -56,12 +63,6 @@ func executeVRRPCommand(cmd string) ([]byte, error) {
 	}
 	return socketConn.ExecVRRPCmd(cmd)
 
-}
-
-func executeBFDCommand(cmd string) ([]byte, error) {
-	// to do: work out how to interact with the bfdd.vty Unix socket:
-	// % [BFD] Unknown command: show bfd peers json
-	return execVtyshCommand(cmd)
 }
 
 func execVtyshCommand(vtyshCmd string) ([]byte, error) {
