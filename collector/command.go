@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin/v2"
 )
 
 var (

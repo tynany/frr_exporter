@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/tynany/frr_exporter/internal/frrsockets"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
-
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/tynany/frr_exporter/internal/frrsockets"
 )
 
 const (

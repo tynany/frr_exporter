@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/exporter-toolkit/web"
-	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
-
-	"github.com/go-kit/log"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
+	"github.com/prometheus/exporter-toolkit/web"
+	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
+
 	"github.com/tynany/frr_exporter/collector"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -66,15 +66,22 @@ func main() {
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
 
 	http.Handle(*telemetryPath, handler(logger))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-			<head><title>FRR Exporter</title></head>
-			<body>
-			<h1>FRR Exporter</h1>
-			<p><a href="` + *telemetryPath + `">Metrics</a></p>
-			</body>
-			</html>`))
-	})
+	if *telemetryPath != "/" && *telemetryPath != "" {
+		landingConfig := web.LandingConfig{
+			Name:        "FRR Exporter",
+			Description: "Prometheus Exporter for FRRouting daemon",
+			Version:     version.Info(),
+			Links: []web.LandingLinks{
+				{Address: *telemetryPath, Text: "Metrics"},
+			},
+		}
+		landingPage, err := web.NewLandingPage(landingConfig)
+		if err != nil {
+			level.Error(logger).Log("err", err)
+			os.Exit(1)
+		}
+		http.Handle("/", landingPage)
+	}
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, webFlagConfig, logger); err != nil {
