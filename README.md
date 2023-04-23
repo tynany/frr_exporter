@@ -20,45 +20,50 @@ To view available flags:
 usage: frr_exporter [<flags>]
 
 Flags:
-  -h, --help                    Show context-sensitive help (also try --help-long and --help-man).
-      --collector.bgp.peer-types
-                                Enable the frr_bgp_peer_types_up metric (default: disabled).
+  -h, --[no-]help                Show context-sensitive help (also try --help-long and --help-man).
+      --[no-]collector.bgp.peer-types
+                                 Enable the frr_bgp_peer_types_up metric (default: disabled).
       --collector.bgp.peer-types.keys=type ...
-                                Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric.
-                                Supports multiple values (default: type).
-      --collector.bgp.peer-descriptions
-                                Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
-      --collector.bgp.peer-descriptions.plain-text
-                                Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
-      --collector.bgp.advertised-prefixes
-                                Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer.
-                                This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
+                                 Select the keys from the JSON formatted BGP peer description of which the values will be used with the
+                                 frr_bgp_peer_types_up metric. Supports multiple values (default: type).
+      --[no-]collector.bgp.peer-descriptions
+                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default:
+                                 disabled).
+      --[no-]collector.bgp.peer-hostnames
+                                 Add the value of the hostname key from the JSON formatted BGP peer description as a label to peer metrics.
+                                 (default: disabled).
+      --[no-]collector.bgp.peer-descriptions.plain-text
+                                 Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default:
+                                 disabled).
+      --[no-]collector.bgp.advertised-prefixes
+                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes
+                                 to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
       --frr.socket.dir-path="/var/run/frr"
-                                Path of of the localstatedir containing each daemon's Unix socket.
-      --frr.socket.timeout=20s  Timeout when connecting to the FRR daemon Unix sockets
-      --frr.vtysh               Use vtysh to query FRR instead of each daemon's Unix socket (default: disabled, recommended: disabled).
+                                 Path of of the localstatedir containing each daemon's Unix socket.
+      --frr.socket.timeout=20s   Timeout when connecting to the FRR daemon Unix sockets
+      --[no-]frr.vtysh           Use vtysh to query FRR instead of each daemon's Unix socket (default: disabled, recommended: disabled).
       --frr.vtysh.path="/usr/bin/vtysh"
-                                Path of vtysh.
-      --frr.vtysh.timeout=20s   The timeout when running vtysh commands (default: 20s).
-      --frr.vtysh.sudo          Enable sudo when executing vtysh commands.
-      --frr.vtysh.options=""    Additional options passed to vtysh.
+                                 Path of vtysh.
+      --frr.vtysh.timeout=20s    The timeout when running vtysh commands (default: 20s).
+      --[no-]frr.vtysh.sudo      Enable sudo when executing vtysh commands.
+      --frr.vtysh.options=""     Additional options passed to vtysh.
       --collector.ospf.instances=""
-                                Comma-separated list of instance IDs if using multiple OSPF instances
-      --collector.bfd           Enable the bfd collector (default: enabled, to disable use --no-collector.bfd).
-      --collector.bgp           Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
-      --collector.bgp6          Enable the bgp6 collector (default: disabled).
-      --collector.bgpl2vpn      Enable the bgpl2vpn collector (default: disabled).
-      --collector.ospf          Enable the ospf collector (default: enabled, to disable use --no-collector.ospf).
-      --collector.pim           Enable the pim collector (default: disabled).
-      --collector.vrrp          Enable the vrrp collector (default: disabled).
-      --web.listen-address=":9342"
-                                Address on which to expose metrics and web interface.
+                                 Comma-separated list of instance IDs if using multiple OSPF instances
+      --[no-]collector.bfd       Enable the bfd collector (default: enabled, to disable use --no-collector.bfd).
+      --[no-]collector.bgp       Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
+      --[no-]collector.bgp6      Enable the bgp6 collector (default: disabled).
+      --[no-]collector.bgpl2vpn  Enable the bgpl2vpn collector (default: disabled).
+      --[no-]collector.ospf      Enable the ospf collector (default: enabled, to disable use --no-collector.ospf).
+      --[no-]collector.pim       Enable the pim collector (default: disabled).
+      --[no-]collector.vrrp      Enable the vrrp collector (default: disabled).
       --web.telemetry-path="/metrics"
-                                Path under which to expose metrics.
-      --web.config=""           [EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.
-      --log.level=info          Only log messages with the given severity or above. One of: [debug, info, warn, error]
-      --log.format=logfmt       Output format of log messages. One of: [logfmt, json]
-      --version                 Show application version.
+                                 Path under which to expose metrics.
+      --web.listen-address=:9342 ...
+                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses.
+      --web.config.file=""       [EXPERIMENTAL] Path to configuration file that can enable TLS or authentication.
+      --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
+      --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
+      --[no-]version             Show application version.
 ```
 
 Promethues configuraiton:
@@ -77,8 +82,9 @@ scrape_configs:
 
 ## Docker
 
-A Docker container is available at
-[tynany/frr_exporter](https://hub.docker.com/r/tynany/frr_exporter).
+A Docker container is available at:
+- Docker Hub: [tynany/frr_exporter](https://hub.docker.com/r/tynany/frr_exporter)
+- GitHub Container Registry: [ghcr.io/tynany/frr_exporter](https://github.com/tynany/frr_exporter/pkgs/container/frr_exporter)
 
 ### Example
 
