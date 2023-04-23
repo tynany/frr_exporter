@@ -68,8 +68,18 @@ func mockSocket(socketPath string, socketData string) {
 		panic(err)
 	}
 
-	_, err = conn.Write([]byte(socketData + "\x00"))
-	if err != nil {
+	// If initial command is 'enable', send expected response and wait for next command.
+	if string(cmd[:7]) == "enable\x00" {
+		if _, err := conn.Write([]byte{0, 0, 0, 0}); err != nil {
+			panic(err)
+		}
+
+		if _, err := conn.Read(cmd); err != nil {
+			panic(err)
+		}
+	}
+
+	if _, err := conn.Write([]byte(socketData + "\x00")); err != nil {
 		panic(err)
 	}
 }
