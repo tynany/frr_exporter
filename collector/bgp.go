@@ -157,7 +157,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 	SAFI := ""
 
 	if (AFI == "ipv4") || (AFI == "ipv6") {
-		SAFI = "unicast"
+		SAFI = ""
 
 	} else if AFI == "l2vpn" {
 		SAFI = "evpn"
@@ -174,9 +174,25 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 }
 
 func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger log.Logger, bgpDesc map[string]*prometheus.Desc) error {
-	var jsonMap map[string]bgpProcess
-	if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
-		return err
+	var jsonMap map[string]map[string]bgpProcess
+
+	// if we've specified SAFI in the command, we won't have the SAFI layer of array to loop through
+	// so we simulate it here, rather than using a conditional and writing almost the same code twice
+	if AFI == "l2vpn" && SAFI == "evpn" {
+		// since we need to massage the format a bit, unmarshall into a temp variable
+		var tempJsonMap map[string]bgpProcess
+		if err := json.Unmarshal(jsonBGPSum, &tempJsonMap); err != nil {
+			return err
+		}
+		jsonMap = map[string]map[string]bgpProcess{}
+		for vrfName, vrfData := range tempJsonMap {
+			jsonMap[vrfName] = map[string]bgpProcess{"evpn": vrfData}
+		}
+	} else {
+		// we have the format we expect, unmarshall directly into jsonMap
+		if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
+			return err
+		}
 	}
 
 	var peerDesc map[string]bgpVRF
@@ -188,107 +204,116 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		}
 	}
 
-	peerTypes := make(map[string]float64)
+	peerTypes := make(map[string]map[string]float64)
 	wgAdvertisedPrefixes := &sync.WaitGroup{}
 	for vrfName, vrfData := range jsonMap {
-		// The labels are "vrf", "afi",  "safi", "local_as"
-		localAs := strconv.FormatUint(uint64(vrfData.AS), 10)
-		procLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs}
-		// No point collecting metrics if no peers configured.
-		if vrfData.PeerCount != 0 {
-			newGauge(ch, bgpDesc["ribCount"], float64(vrfData.RIBCount), procLabels...)
-			newGauge(ch, bgpDesc["ribMemory"], float64(vrfData.RIBMemory), procLabels...)
-			newGauge(ch, bgpDesc["peerCount"], float64(vrfData.PeerCount), procLabels...)
-			newGauge(ch, bgpDesc["peerMemory"], float64(vrfData.PeerMemory), procLabels...)
-			newGauge(ch, bgpDesc["peerGroupCount"], float64(vrfData.PeerGroupCount), procLabels...)
-			newGauge(ch, bgpDesc["peerGroupMemory"], float64(vrfData.PeerGroupMemory), procLabels...)
+		for safiName, safiData := range vrfData {
+			// The labels are "vrf", "afi",  "safi", "local_as"
+			localAs := strconv.FormatUint(uint64(safiData.AS), 10)
+			procLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(safiName[4:]), localAs}
+			// No point collecting metrics if no peers configured.
+			if safiData.PeerCount != 0 {
+				newGauge(ch, bgpDesc["ribCount"], float64(safiData.RIBCount), procLabels...)
+				newGauge(ch, bgpDesc["ribMemory"], float64(safiData.RIBMemory), procLabels...)
+				newGauge(ch, bgpDesc["peerCount"], float64(safiData.PeerCount), procLabels...)
+				newGauge(ch, bgpDesc["peerMemory"], float64(safiData.PeerMemory), procLabels...)
+				newGauge(ch, bgpDesc["peerGroupCount"], float64(safiData.PeerGroupCount), procLabels...)
+				newGauge(ch, bgpDesc["peerGroupMemory"], float64(safiData.PeerGroupMemory), procLabels...)
 
-			for peerIP, peerData := range vrfData.Peers {
-				// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
-				peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(SAFI), localAs, peerIP, strconv.FormatUint(uint64(peerData.RemoteAs), 10)}
+				for peerIP, peerData := range safiData.Peers {
+					// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as"
+					peerLabels := []string{strings.ToLower(vrfName), strings.ToLower(AFI), strings.ToLower(safiName[4:]), localAs, peerIP, strconv.FormatUint(uint64(peerData.RemoteAs), 10)}
 
-				if *bgpPeerDescs {
-					d := peerDesc[vrfName].BGPNeighbors[peerIP].Desc
-					if *bgpPeerDescsText {
-						// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
-						peerLabels = append(peerLabels, d)
-					} else {
-						// Assume the FRR BGP neighbor description is JSON formatted, and the description is in the "desc" field.
-						jsonDesc := struct{ Desc string }{}
-						if err := json.Unmarshal([]byte(d), &jsonDesc); err != nil {
+					if *bgpPeerDescs {
+						d := peerDesc[vrfName].BGPNeighbors[peerIP].Desc
+						if *bgpPeerDescsText {
+							// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
+							peerLabels = append(peerLabels, d)
+						} else {
+							// Assume the FRR BGP neighbor description is JSON formatted, and the description is in the "desc" field.
+							jsonDesc := struct{ Desc string }{}
+							if err := json.Unmarshal([]byte(d), &jsonDesc); err != nil {
+								// Don't return an error as unmarshalling is best effort.
+								level.Error(logger).Log("msg", "cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
+							}
+							// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
+							peerLabels = append(peerLabels, jsonDesc.Desc)
+						}
+					}
+
+					if *bgpPeerHostnames {
+						peerLabels = append(peerLabels, peerData.Hostname)
+					}
+
+					// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
+					if peerData.PfxSnt != nil {
+						newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(*peerData.PfxSnt), peerLabels...)
+					} else if *bgpAdvertisedPrefixes {
+						wgAdvertisedPrefixes.Add(1)
+						go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, safiName[4:], vrfName, peerIP, logger, bgpDesc, peerLabels...)
+					}
+
+					newCounter(ch, bgpDesc["msgRcvd"], float64(peerData.MsgRcvd), peerLabels...)
+					newCounter(ch, bgpDesc["msgSent"], float64(peerData.MsgSent), peerLabels...)
+					newGauge(ch, bgpDesc["UptimeSec"], float64(peerData.PeerUptimeMsec)*0.001, peerLabels...)
+
+					// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of recieved prefixes, but in later versions it was changed to PfxRcd.
+					prefixReceived := 0.0
+					if peerData.PrefixReceivedCount != 0 {
+						prefixReceived = float64(peerData.PrefixReceivedCount)
+					} else if peerData.PfxRcd != 0 {
+						prefixReceived = float64(peerData.PfxRcd)
+					}
+					newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
+
+					var peerDescTypes map[string]string
+					if *bgpPeerTypes {
+						if err := json.Unmarshal([]byte(peerDesc[vrfName].BGPNeighbors[peerIP].Desc), &peerDescTypes); err != nil {
 							// Don't return an error as unmarshalling is best effort.
 							level.Error(logger).Log("msg", "cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
 						}
-						// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
-						peerLabels = append(peerLabels, jsonDesc.Desc)
-					}
-				}
 
-				if *bgpPeerHostnames {
-					peerLabels = append(peerLabels, peerData.Hostname)
-				}
-
-				// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
-				if peerData.PfxSnt != nil {
-					newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(*peerData.PfxSnt), peerLabels...)
-				} else if *bgpAdvertisedPrefixes {
-					wgAdvertisedPrefixes.Add(1)
-					go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, SAFI, vrfName, peerIP, logger, bgpDesc, peerLabels...)
-				}
-
-				newCounter(ch, bgpDesc["msgRcvd"], float64(peerData.MsgRcvd), peerLabels...)
-				newCounter(ch, bgpDesc["msgSent"], float64(peerData.MsgSent), peerLabels...)
-				newGauge(ch, bgpDesc["UptimeSec"], float64(peerData.PeerUptimeMsec)*0.001, peerLabels...)
-
-				// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of recieved prefixes, but in later versions it was changed to PfxRcd.
-				prefixReceived := 0.0
-				if peerData.PrefixReceivedCount != 0 {
-					prefixReceived = float64(peerData.PrefixReceivedCount)
-				} else if peerData.PfxRcd != 0 {
-					prefixReceived = float64(peerData.PfxRcd)
-				}
-				newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
-
-				var peerDescTypes map[string]string
-				if *bgpPeerTypes {
-					if err := json.Unmarshal([]byte(peerDesc[vrfName].BGPNeighbors[peerIP].Desc), &peerDescTypes); err != nil {
-						// Don't return an error as unmarshalling is best effort.
-						level.Error(logger).Log("msg", "cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
-					}
-
-					for _, descKey := range *frrBGPDescKey {
-						if peerDescTypes[descKey] != "" {
-							if _, exist := peerTypes[strings.TrimSpace(peerDescTypes[descKey])]; !exist {
-								peerTypes[strings.TrimSpace(peerDescTypes[descKey])] = 0
-							}
+						// add key for this SAFI if it doesn't exist
+						if _, exist := peerTypes[strings.ToLower(safiName[4:])]; !exist {
+							peerTypes[strings.ToLower(safiName[4:])] = make(map[string]float64)
 						}
-					}
-				}
-				peerState := 0.0
-				switch peerDataState := strings.ToLower(peerData.State); peerDataState {
-				case "established":
-					peerState = 1
-					if *bgpPeerTypes {
+
 						for _, descKey := range *frrBGPDescKey {
 							if peerDescTypes[descKey] != "" {
-								peerTypes[strings.TrimSpace(peerDescTypes[descKey])]++
+								if _, exist := peerTypes[strings.ToLower(safiName[4:])][strings.TrimSpace(peerDescTypes[descKey])]; !exist {
+									peerTypes[strings.ToLower(safiName[4:])][strings.TrimSpace(peerDescTypes[descKey])] = 0
+								}
 							}
 						}
 					}
-				case "idle (admin)":
-					peerState = 2
-				}
-				newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
+					peerState := 0.0
+					switch peerDataState := strings.ToLower(peerData.State); peerDataState {
+					case "established":
+						peerState = 1
+						if *bgpPeerTypes {
+							for _, descKey := range *frrBGPDescKey {
+								if peerDescTypes[descKey] != "" {
+									peerTypes[strings.ToLower(safiName[4:])][strings.TrimSpace(peerDescTypes[descKey])]++
+								}
+							}
+						}
+					case "idle (admin)":
+						peerState = 2
+					}
+					newGauge(ch, bgpDesc["state"], peerState, peerLabels...)
 
+				}
 			}
 		}
 	}
 
 	wgAdvertisedPrefixes.Wait()
 
-	for peerType, count := range peerTypes {
-		peerTypeLabels := []string{peerType, strings.ToLower(AFI), strings.ToLower(SAFI)}
-		newGauge(ch, bgpDesc["peerTypesUp"], count, peerTypeLabels...)
+	for peerSafi, peerTypesPerSafi := range peerTypes {
+		for peerType, count := range peerTypesPerSafi {
+			peerTypeLabels := []string{peerType, strings.ToLower(AFI), peerSafi}
+			newGauge(ch, bgpDesc["peerTypesUp"], count, peerTypeLabels...)
+		}
 	}
 	return nil
 }
