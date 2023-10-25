@@ -186,7 +186,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		}
 		jsonMap = map[string]map[string]bgpProcess{}
 		for vrfName, vrfData := range tempJsonMap {
-			jsonMap[vrfName] = map[string]bgpProcess{"evpn": vrfData}
+			jsonMap[vrfName] = map[string]bgpProcess{"xxxxevpn": vrfData}
 		}
 	} else {
 		// we have the format we expect, unmarshall directly into jsonMap
