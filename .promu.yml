@@ -1,6 +1,6 @@
 go:
     # Whenever the Go version is updated here, .circle/config.yml and Dockerfile should also be updated.
-    version: 1.17
+    version: 1.22
 repository:
     path: github.com/tynany/frr_exporter
 build:
@@ -21,7 +21,6 @@ crossbuild:
         - linux/arm
         - linux/arm64
         - darwin/amd64
-        - darwin/386
         - darwin/arm
         - darwin/arm64
         - freebsd/amd64
