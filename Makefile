@@ -1,4 +1,4 @@
-PROMU_VERSION := 0.12.0
+PROMU_VERSION := 0.17.0
 
 setup_promu:
 	curl -s -L https://github.com/prometheus/promu/releases/download/v$(PROMU_VERSION)/promu-$(PROMU_VERSION).linux-amd64.tar.gz | tar -xvzf -
