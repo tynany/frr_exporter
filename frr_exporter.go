@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
@@ -60,7 +61,7 @@ func main() {
 
 	logger := promlog.New(promlogConfig)
 
-	prometheus.MustRegister(version.NewCollector("frr_exporter"))
+	prometheus.MustRegister(versioncollector.NewCollector("frr_exporter"))
 
 	level.Info(logger).Log("msg", "Starting frr_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
