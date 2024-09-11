@@ -4,6 +4,7 @@ import (
 	"fmt"
 	inbuiltLog "log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
