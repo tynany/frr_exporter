@@ -2,8 +2,8 @@ package collector
 
 import (
 	"encoding/json"
+	"log/slog"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -16,12 +16,12 @@ func init() {
 }
 
 type bfdCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 }
 
 // NewBFDCollector collects BFD metrics, implemented as per the Collector interface.
-func NewBFDCollector(logger log.Logger) (Collector, error) {
+func NewBFDCollector(logger *slog.Logger) (Collector, error) {
 	return &bfdCollector{logger: logger, descriptions: getBFDDesc()}, nil
 }
 

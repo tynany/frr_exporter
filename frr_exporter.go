@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
-	inbuiltLog "log"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -27,7 +25,7 @@ var (
 	webFlagConfig = kingpinflag.AddFlags(kingpin.CommandLine, ":9342")
 )
 
-func handler(logger log.Logger) http.Handler {
+func handler(logger *slog.Logger) http.Handler {
 	registry := prometheus.NewRegistry()
 
 	nc, err := collector.NewExporter(logger)
@@ -45,7 +43,7 @@ func handler(logger log.Logger) http.Handler {
 	}
 
 	handlerOpts := promhttp.HandlerOpts{
-		ErrorLog:      inbuiltLog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0),
+		ErrorLog:      slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		ErrorHandling: promhttp.ContinueOnError,
 	}
 
@@ -53,19 +51,19 @@ func handler(logger log.Logger) http.Handler {
 }
 
 func main() {
-	promlogConfig := &promlog.Config{}
+	promslogConfig := &promslog.Config{}
 
-	flag.AddFlags(kingpin.CommandLine, promlogConfig)
+	flag.AddFlags(kingpin.CommandLine, promslogConfig)
 	kingpin.Version(version.Print("frr_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := promlog.New(promlogConfig)
+	logger := promslog.New(promslogConfig)
 
 	prometheus.MustRegister(versioncollector.NewCollector("frr_exporter"))
 
-	level.Info(logger).Log("msg", "Starting frr_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
+	logger.Info("Starting frr_exporter", "version", version.Info())
+	logger.Info("Build context", "build_context", version.BuildContext())
 
 	http.Handle(*telemetryPath, handler(logger))
 	if *telemetryPath != "/" && *telemetryPath != "" {
@@ -79,7 +77,7 @@ func main() {
 		}
 		landingPage, err := web.NewLandingPage(landingConfig)
 		if err != nil {
-			level.Error(logger).Log("err", err)
+			logger.Error(err.Error())
 			os.Exit(1)
 		}
 		http.Handle("/", landingPage)
@@ -87,7 +85,7 @@ func main() {
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, webFlagConfig, logger); err != nil {
-		level.Error(logger).Log("err", err)
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 }

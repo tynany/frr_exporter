@@ -2,13 +2,12 @@ package collector
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/tynany/frr_exporter/internal/frrsockets"
@@ -36,13 +35,13 @@ var (
 	socketDirPath = kingpin.Flag("frr.socket.dir-path", "Path of of the localstatedir containing each daemon's Unix socket.").Default("/var/run/frr").String()
 	socketTimeout = kingpin.Flag("frr.socket.timeout", "Timeout when connecting to the FRR daemon Unix sockets").Default("20s").Duration()
 
-	factories              = make(map[string]func(logger log.Logger) (Collector, error))
+	factories              = make(map[string]func(logger *slog.Logger) (Collector, error))
 	initiatedCollectorsMtx = sync.Mutex{}
 	initiatedCollectors    = make(map[string]Collector)
 	collectorState         = make(map[string]*bool)
 )
 
-func registerCollector(name string, enabledByDefaultStatus bool, factory func(logger log.Logger) (Collector, error)) {
+func registerCollector(name string, enabledByDefaultStatus bool, factory func(logger *slog.Logger) (Collector, error)) {
 	defaultState := "disabled"
 	if enabledByDefaultStatus {
 		defaultState = "enabled"
@@ -65,11 +64,11 @@ type Collector interface {
 // Exporter collects all collector metrics, implemented as per the prometheus.Collector interface.
 type Exporter struct {
 	Collectors map[string]Collector
-	logger     log.Logger
+	logger     *slog.Logger
 }
 
 // NewExporter returns a new Exporter.
-func NewExporter(logger log.Logger) (*Exporter, error) {
+func NewExporter(logger *slog.Logger) (*Exporter, error) {
 	collectors := make(map[string]Collector)
 
 	initiatedCollectorsMtx.Lock()
@@ -84,7 +83,7 @@ func NewExporter(logger log.Logger) (*Exporter, error) {
 		if collector, exists := initiatedCollectors[name]; exists {
 			collectors[name] = collector
 		} else {
-			collector, err := factories[name](log.With(logger, "collector", name))
+			collector, err := factories[name](logger.With("collector", name))
 			if err != nil {
 				return nil, err
 			}
@@ -111,7 +110,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	wg.Wait()
 }
 
-func runCollector(ch chan<- prometheus.Metric, name string, collector Collector, wg *sync.WaitGroup, logger log.Logger) {
+func runCollector(ch chan<- prometheus.Metric, name string, collector Collector, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 
 	startTime := time.Now()
@@ -122,9 +121,9 @@ func runCollector(ch chan<- prometheus.Metric, name string, collector Collector,
 
 	success := 0.0
 	if err != nil {
-		level.Error(logger).Log("msg", "collector scrape failed", "name", name, "duration_seconds", scrapeDurationSeconds, "err", err)
+		logger.Error("collector scrape failed", "name", name, "duration_seconds", scrapeDurationSeconds, "err", err)
 	} else {
-		level.Debug(logger).Log("msg", "collector succeeded", "name", name, "duration_seconds", scrapeDurationSeconds)
+		logger.Debug("collector succeeded", "name", name, "duration_seconds", scrapeDurationSeconds)
 		success = 1
 	}
 	ch <- prometheus.MustNewConstMetric(frrDesc["frrCollectorUp"], prometheus.GaugeValue, success, name)
