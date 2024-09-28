@@ -3,10 +3,9 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -19,12 +18,12 @@ func init() {
 }
 
 type pimCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 }
 
 // NewPIMCollector collects PIM metrics, implemented as per the Collector interface.
-func NewPIMCollector(logger log.Logger) (Collector, error) {
+func NewPIMCollector(logger *slog.Logger) (Collector, error) {
 	return &pimCollector{logger: logger, descriptions: getPIMDesc()}, nil
 }
 
@@ -51,7 +50,7 @@ func (c *pimCollector) Update(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger log.Logger, pimDesc map[string]*prometheus.Desc) error {
+func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, logger *slog.Logger, pimDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]json.RawMessage
 	if err := json.Unmarshal(jsonPIMNeighbors, &jsonMap); err != nil {
 		return fmt.Errorf("cannot unmarshal pim neighbors json: %s", err)
@@ -70,7 +69,7 @@ func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, l
 			for neighborIp, neighborData := range neighbors {
 				neighborCount++
 				if uptimeSec, err := parseHMS(neighborData.UpTime); err != nil {
-					level.Error(logger).Log("msg", "cannot parse neighbor uptime", "uptime", neighborData.UpTime, "err", err)
+					logger.Error("cannot parse neighbor uptime", "uptime", neighborData.UpTime, "err", err)
 				} else {
 					// The labels are "vrf", "iface", "neighbor"
 					neighborLabels := []string{strings.ToLower(vrfName), strings.ToLower(ifaceName), neighborIp}

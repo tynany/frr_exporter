@@ -3,13 +3,12 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -31,13 +30,13 @@ func init() {
 }
 
 type bgpCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 	afi          string
 }
 
 // NewBGPCollector collects BGP metrics, implemented as per the Collector interface.
-func NewBGPCollector(logger log.Logger) (Collector, error) {
+func NewBGPCollector(logger *slog.Logger) (Collector, error) {
 	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv4"}, nil
 }
 
@@ -78,17 +77,17 @@ func (c *bgpCollector) Update(ch chan<- prometheus.Metric) error {
 }
 
 // NewBGP6Collector collects BGPv6 metrics, implemented as per the Collector interface.
-func NewBGP6Collector(logger log.Logger) (Collector, error) {
+func NewBGP6Collector(logger *slog.Logger) (Collector, error) {
 	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv6"}, nil
 }
 
 type bgpL2VPNCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 }
 
 // NewBGPL2VPNCollector collects BGP L2VPN metrics, implemented as per the Collector interface.
-func NewBGPL2VPNCollector(logger log.Logger) (Collector, error) {
+func NewBGPL2VPNCollector(logger *slog.Logger) (Collector, error) {
 	return &bgpL2VPNCollector{logger: logger, descriptions: getBGPL2VPNDesc()}, nil
 }
 
@@ -153,7 +152,7 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 	return nil
 }
 
-func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc map[string]*prometheus.Desc) error {
+func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, desc map[string]*prometheus.Desc) error {
 	SAFI := ""
 
 	if (AFI == "ipv4") || (AFI == "ipv6") {
@@ -173,7 +172,7 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger log.Logger, desc
 	return nil
 }
 
-func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger log.Logger, bgpDesc map[string]*prometheus.Desc) error {
+func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc) error {
 	var jsonMap map[string]map[string]bgpProcess
 
 	// if we've specified SAFI in the command, we won't have the SAFI layer of array to loop through
@@ -234,7 +233,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 							jsonDesc := struct{ Desc string }{}
 							if err := json.Unmarshal([]byte(d), &jsonDesc); err != nil {
 								// Don't return an error as unmarshalling is best effort.
-								level.Error(logger).Log("msg", "cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
+								logger.Error("cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
 							}
 							// The labels are "vrf", "afi", "safi", "local_as", "peer", "remote_as", "peer_desc"
 							peerLabels = append(peerLabels, jsonDesc.Desc)
@@ -270,7 +269,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					if *bgpPeerTypes {
 						if err := json.Unmarshal([]byte(peerDesc[vrfName].BGPNeighbors[peerIP].Desc), &peerDescTypes); err != nil {
 							// Don't return an error as unmarshalling is best effort.
-							level.Error(logger).Log("msg", "cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
+							logger.Error("cannot unmarshal bgp description", "description", peerDesc[vrfName].BGPNeighbors[peerIP].Desc, "err", err)
 						}
 
 						// add key for this SAFI if it doesn't exist
@@ -318,7 +317,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	return nil
 }
 
-func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, logger log.Logger, bgpDesc map[string]*prometheus.Desc, peerLabels ...string) {
+func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc, peerLabels ...string) {
 	defer wg.Done()
 
 	var cmd string
@@ -330,13 +329,13 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 
 	output, err := executeBGPCommand(cmd)
 	if err != nil {
-		level.Error(logger).Log("msg", "get neighbor advertised prefixes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		logger.Error("get neighbor advertised prefixes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
 		return
 	}
 
 	var advertisedPrefixes bgpAdvertisedRoutes
 	if err := json.Unmarshal(output, &advertisedPrefixes); err != nil {
-		level.Error(logger).Log("msg", "get neighbor advertised prefixes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		logger.Error("get neighbor advertised prefixes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
 		return
 	}
 

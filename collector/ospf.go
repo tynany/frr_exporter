@@ -3,11 +3,11 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -21,13 +21,13 @@ func init() {
 }
 
 type ospfCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 	instanceIDs  []int
 }
 
 // NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
-func NewOSPFCollector(logger log.Logger) (Collector, error) {
+func NewOSPFCollector(logger *slog.Logger) (Collector, error) {
 	var instanceIDs []int
 	if len(*frrOSPFInstances) > 0 {
 		// FRR Exporter does not support multi-instance when using `vtysh` to interface with FRR

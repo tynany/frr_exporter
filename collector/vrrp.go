@@ -2,10 +2,10 @@ package collector
 
 import (
 	"encoding/json"
+	"log/slog"
 	"strconv"
 	"strings"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -46,12 +46,12 @@ type VrrpInstanceStats struct {
 }
 
 type vrrpCollector struct {
-	logger       log.Logger
+	logger       *slog.Logger
 	descriptions map[string]*prometheus.Desc
 }
 
 // NewVRRPCollector collects VRRP metrics, implemented as per the Collector interface.
-func NewVRRPCollector(logger log.Logger) (Collector, error) {
+func NewVRRPCollector(logger *slog.Logger) (Collector, error) {
 	return &vrrpCollector{logger: logger, descriptions: getVRRPDesc()}, nil
 }
 
