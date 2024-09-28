@@ -10,38 +10,36 @@ import (
 	dto "github.com/prometheus/client_model/go"
 )
 
-var (
-	expectedVRRPMetrics = map[string]float64{
-		"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":      1548196,
-		"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":      4.0,
-		"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                 0.0,
-		"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":      1548195,
-		"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":          6,
-		"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":          1548210,
-		"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                     0,
-		"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":          2,
-		"frr_vrrp_gratuitous_arp_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":          4,
-		"frr_vrrp_gratuitous_arp_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":          1,
-		"frr_vrrp_neighbor_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":            0,
-		"frr_vrrp_neighbor_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}": 5,
-		"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":            9,
-		"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":            2,
-		"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                       0,
-		"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":            11,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Backup,subinterface=extnet_v4_1,vrid=1}":                 1,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Backup,subinterface=extnet_v4_2,vrid=2}":                 0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Initialize,subinterface=extnet_v4_1,vrid=1}":             0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Initialize,subinterface=extnet_v4_2,vrid=2}":             0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Master,subinterface=extnet_v4_1,vrid=1}":                 0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Master,subinterface=extnet_v4_2,vrid=2}":                 1,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Backup,subinterface=,vrid=2}":                            0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Backup,subinterface=extnet_v6_1,vrid=1}":                 1,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Initialize,subinterface=,vrid=2}":                        1,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Initialize,subinterface=extnet_v6_1,vrid=1}":             0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Master,subinterface=,vrid=2}":                            0,
-		"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Master,subinterface=extnet_v6_1,vrid=1}":                 0,
-	}
-)
+var expectedVRRPMetrics = map[string]float64{
+	"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":      1548196,
+	"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":      4.0,
+	"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                 0.0,
+	"frr_vrrp_advertisements_received_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":      1548195,
+	"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":          6,
+	"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":          1548210,
+	"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                     0,
+	"frr_vrrp_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":          2,
+	"frr_vrrp_gratuitous_arp_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":          4,
+	"frr_vrrp_gratuitous_arp_sent_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":          1,
+	"frr_vrrp_neighbor_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":            0,
+	"frr_vrrp_neighbor_advertisements_sent_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}": 5,
+	"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_1,vrid=1}":            9,
+	"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v4,subinterface=extnet_v4_2,vrid=2}":            2,
+	"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v6,subinterface=,vrid=2}":                       0,
+	"frr_vrrp_state_transitions_total{interface=gw_extnet,proto=v6,subinterface=extnet_v6_1,vrid=1}":            11,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Backup,subinterface=extnet_v4_1,vrid=1}":                 1,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Backup,subinterface=extnet_v4_2,vrid=2}":                 0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Initialize,subinterface=extnet_v4_1,vrid=1}":             0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Initialize,subinterface=extnet_v4_2,vrid=2}":             0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Master,subinterface=extnet_v4_1,vrid=1}":                 0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v4,state=Master,subinterface=extnet_v4_2,vrid=2}":                 1,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Backup,subinterface=,vrid=2}":                            0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Backup,subinterface=extnet_v6_1,vrid=1}":                 1,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Initialize,subinterface=,vrid=2}":                        1,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Initialize,subinterface=extnet_v6_1,vrid=1}":             0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Master,subinterface=,vrid=2}":                            0,
+	"frr_vrrp_state{interface=gw_extnet,proto=v6,state=Master,subinterface=extnet_v6_1,vrid=1}":                 0,
+}
 
 func TestProcessVRRPInfo(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
@@ -91,7 +89,6 @@ func TestProcessVRRPInfo(t *testing.T) {
 			if expectedMetricVal != metricVal {
 				t.Errorf("metric %s expected value %v got %v", metricName, expectedMetricVal, metricVal)
 			}
-
 		} else {
 			t.Errorf("unexpected metric: %s : %v", metricName, metricVal)
 		}

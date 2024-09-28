@@ -62,7 +62,6 @@ func executeVRRPCommand(cmd string) ([]byte, error) {
 		return execVtyshCommand(cmd)
 	}
 	return socketConn.ExecVRRPCmd(cmd)
-
 }
 
 func execVtyshCommand(vtyshCmd string) ([]byte, error) {

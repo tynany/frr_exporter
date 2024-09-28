@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -25,31 +24,6 @@ var (
 	webFlagConfig = kingpinflag.AddFlags(kingpin.CommandLine, ":9342")
 )
 
-func handler(logger *slog.Logger) http.Handler {
-	registry := prometheus.NewRegistry()
-
-	nc, err := collector.NewExporter(logger)
-	if err != nil {
-		panic(fmt.Sprintf("Couldn't create collector: %s", err))
-	}
-
-	if err := registry.Register(nc); err != nil {
-		panic(fmt.Sprintf("Couldn't register collector: %s", err))
-	}
-
-	gatheres := prometheus.Gatherers{
-		prometheus.DefaultGatherer,
-		registry,
-	}
-
-	handlerOpts := promhttp.HandlerOpts{
-		ErrorLog:      slog.NewLogLogger(logger.Handler(), slog.LevelError),
-		ErrorHandling: promhttp.ContinueOnError,
-	}
-
-	return promhttp.HandlerFor(gatheres, handlerOpts)
-}
-
 func main() {
 	promslogConfig := &promslog.Config{}
 
@@ -65,7 +39,14 @@ func main() {
 	logger.Info("Starting frr_exporter", "version", version.Info())
 	logger.Info("Build context", "build_context", version.BuildContext())
 
-	http.Handle(*telemetryPath, handler(logger))
+	nc, err := collector.NewExporter(logger)
+	if err != nil {
+		panic(fmt.Sprintf("Couldn't create collector: %s", err))
+	}
+
+	prometheus.MustRegister(nc)
+
+	http.Handle(*telemetryPath, promhttp.Handler())
 	if *telemetryPath != "/" && *telemetryPath != "" {
 		landingConfig := web.LandingConfig{
 			Name:        "FRR Exporter",

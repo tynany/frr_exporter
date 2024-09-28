@@ -7,9 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	bfdSubsystem = "bfd"
-)
+var bfdSubsystem = "bfd"
 
 func init() {
 	registerCollector(bfdSubsystem, enabledByDefault, NewBFDCollector)
