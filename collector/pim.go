@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var pimSubsystem = "pim"
+const pimSubsystem = "pim"
 
 func init() {
 	registerCollector(pimSubsystem, disabledByDefault, NewPIMCollector)
