@@ -9,9 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	pimSubsystem = "pim"
-)
+const pimSubsystem = "pim"
 
 func init() {
 	registerCollector(pimSubsystem, disabledByDefault, NewPIMCollector)
@@ -66,13 +64,13 @@ func processPIMNeighbors(ch chan<- prometheus.Metric, jsonPIMNeighbors []byte, l
 			if err := json.Unmarshal(ifaceData, &neighbors); err != nil {
 				return fmt.Errorf("cannot unmarshal neighbor json: %s", err)
 			}
-			for neighborIp, neighborData := range neighbors {
+			for neighborIP, neighborData := range neighbors {
 				neighborCount++
 				if uptimeSec, err := parseHMS(neighborData.UpTime); err != nil {
 					logger.Error("cannot parse neighbor uptime", "uptime", neighborData.UpTime, "err", err)
 				} else {
 					// The labels are "vrf", "iface", "neighbor"
-					neighborLabels := []string{strings.ToLower(vrfName), strings.ToLower(ifaceName), neighborIp}
+					neighborLabels := []string{strings.ToLower(vrfName), strings.ToLower(ifaceName), neighborIP}
 					newGauge(ch, pimDesc["upTime"], float64(uptimeSec), neighborLabels...)
 				}
 

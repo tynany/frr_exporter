@@ -1,5 +1,13 @@
 linters-settings:
   errcheck:
     exclude-functions:
-      - (github.com/go-kit/log.Logger).Log
       - (net/http.ResponseWriter).Write
+
+linters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - misspell
+    - revive
+    - sloglint

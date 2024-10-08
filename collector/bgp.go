@@ -41,7 +41,6 @@ func NewBGPCollector(logger *slog.Logger) (Collector, error) {
 }
 
 func getBGPDesc() map[string]*prometheus.Desc {
-
 	bgpLabels := []string{"vrf", "afi", "safi", "local_as"}
 	bgpPeerTypeLabels := []string{"type", "afi", "safi"}
 	bgpPeerLabels := append(bgpLabels, "peer", "peer_as")
@@ -157,7 +156,6 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, de
 
 	if (AFI == "ipv4") || (AFI == "ipv6") {
 		SAFI = ""
-
 	} else if AFI == "l2vpn" {
 		SAFI = "evpn"
 	}
@@ -179,12 +177,12 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	// so we simulate it here, rather than using a conditional and writing almost the same code twice
 	if AFI == "l2vpn" && SAFI == "evpn" {
 		// since we need to massage the format a bit, unmarshall into a temp variable
-		var tempJsonMap map[string]bgpProcess
-		if err := json.Unmarshal(jsonBGPSum, &tempJsonMap); err != nil {
+		var tempJSONMap map[string]bgpProcess
+		if err := json.Unmarshal(jsonBGPSum, &tempJSONMap); err != nil {
 			return err
 		}
 		jsonMap = map[string]map[string]bgpProcess{}
-		for vrfName, vrfData := range tempJsonMap {
+		for vrfName, vrfData := range tempJSONMap {
 			jsonMap[vrfName] = map[string]bgpProcess{"xxxxevpn": vrfData}
 		}
 	} else {
@@ -256,7 +254,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					newCounter(ch, bgpDesc["msgSent"], float64(peerData.MsgSent), peerLabels...)
 					newGauge(ch, bgpDesc["UptimeSec"], float64(peerData.PeerUptimeMsec)*0.001, peerLabels...)
 
-					// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of recieved prefixes, but in later versions it was changed to PfxRcd.
+					// In earlier versions of FRR, the prefixReceivedCount JSON element is used for the number of received prefixes, but in later versions it was changed to PfxRcd.
 					prefixReceived := 0.0
 					if peerData.PrefixReceivedCount != 0 {
 						prefixReceived = float64(peerData.PrefixReceivedCount)
@@ -370,7 +368,6 @@ type bgpAdvertisedRoutes struct {
 }
 
 func getBGPPeerDesc() (map[string]bgpVRF, error) {
-
 	output, err := executeBGPCommand("show bgp vrf all neighbors json")
 	if err != nil {
 		return nil, err

@@ -135,7 +135,6 @@ func compareMetrics(t *testing.T, gotMetrics map[string]float64, expectedMetrics
 			if expectedMetricVal != metricVal {
 				t.Errorf("metric %s expected value %v got %v", metricName, expectedMetricVal, metricVal)
 			}
-
 		} else {
 			t.Errorf("unexpected metric: %s : %v", metricName, metricVal)
 		}

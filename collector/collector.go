@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	metric_namespace  = "frr"
+	metricNamespace   = "frr"
 	enabledByDefault  = true
 	disabledByDefault = false
 )
@@ -22,7 +22,7 @@ const (
 var (
 	socketConn          *frrsockets.Connection
 	frrTotalScrapeCount = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: metric_namespace,
+		Namespace: metricNamespace,
 		Name:      "scrapes_total",
 		Help:      "Total number of times FRR has been scraped.",
 	})
@@ -137,11 +137,11 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func promDesc(metricName string, metricDescription string, labels []string) *prometheus.Desc {
-	return prometheus.NewDesc(metric_namespace+"_"+metricName, metricDescription, labels, nil)
+	return prometheus.NewDesc(metricNamespace+"_"+metricName, metricDescription, labels, nil)
 }
 
 func colPromDesc(subsystem string, metricName string, metricDescription string, labels []string) *prometheus.Desc {
-	return prometheus.NewDesc(prometheus.BuildFQName(metric_namespace, subsystem, metricName), metricDescription, labels, nil)
+	return prometheus.NewDesc(prometheus.BuildFQName(metricNamespace, subsystem, metricName), metricDescription, labels, nil)
 }
 
 func newGauge(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric float64, labels ...string) {
