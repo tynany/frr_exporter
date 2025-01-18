@@ -6,7 +6,7 @@ RUN make setup_promu
 RUN ./promu build
 RUN ls -lah
 
-FROM quay.io/frrouting/frr:10.1.0
+FROM quay.io/frrouting/frr:10.1.2
 WORKDIR /app
 COPY --from=0 /go/src/github.com/tynany/frr_exporter/frr_exporter .
 EXPOSE 9342
