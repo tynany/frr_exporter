@@ -15,13 +15,14 @@ import (
 var (
 	bgpSubsystem = "bgp"
 
-	bgpPeerTypes          = kingpin.Flag("collector.bgp.peer-types", "Enable the frr_bgp_peer_types_up metric (default: disabled).").Default("False").Bool()
-	frrBGPDescKey         = kingpin.Flag("collector.bgp.peer-types.keys", "Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports multiple values (default: type).").Default("type").Strings()
-	bgpPeerDescs          = kingpin.Flag("collector.bgp.peer-descriptions", "Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
-	bgpPeerGroups         = kingpin.Flag("collector.bgp.peer-groups", "Add the value of the group key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
-	bgpPeerHostnames      = kingpin.Flag("collector.bgp.peer-hostnames", "Add the value of the hostname key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
-	bgpPeerDescsText      = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
-	bgpAdvertisedPrefixes = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
+	bgpPeerTypes                = kingpin.Flag("collector.bgp.peer-types", "Enable the frr_bgp_peer_types_up metric (default: disabled).").Default("False").Bool()
+	frrBGPDescKey               = kingpin.Flag("collector.bgp.peer-types.keys", "Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric. Supports multiple values (default: type).").Default("type").Strings()
+	bgpPeerDescs                = kingpin.Flag("collector.bgp.peer-descriptions", "Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).").Default("False").Bool()
+	bgpPeerGroups               = kingpin.Flag("collector.bgp.peer-groups", "Adds the peer's peer group name as a label. (default: disabled).").Default("False").Bool()
+  bgpPeerHostnames            = kingpin.Flag("collector.bgp.peer-hostnames", "Adds the peer's hostname as a label. (default: disabled).").Default("False").Bool()
+	bgpPeerDescsText            = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
+	bgpAdvertisedPrefixes       = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
+	bgpAcceptedFilteredPrefixes = kingpin.Flag("collector.bgp.accepted-filtered-prefixes", "Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).").Default("False").Bool()
 )
 
 func init() {
@@ -69,6 +70,8 @@ func getBGPDesc() map[string]*prometheus.Desc {
 		"msgSent":               colPromDesc(bgpSubsystem, "peer_message_sent_total", "Number of sent messages.", bgpPeerLabels),
 		"prefixReceivedCount":   colPromDesc(bgpSubsystem, "peer_prefixes_received_count_total", "Number of prefixes received.", bgpPeerLabels),
 		"prefixAdvertisedCount": colPromDesc(bgpSubsystem, "peer_prefixes_advertised_count_total", "Number of prefixes advertised.", bgpPeerLabels),
+		"prefixAcceptedCount":   colPromDesc(bgpSubsystem, "peer_prefixes_accepted_count_total", "Number of prefixes accepted.", bgpPeerLabels),
+		"prefixFilteredCount":   colPromDesc(bgpSubsystem, "peer_prefixes_filtered_count_total", "Number of prefixes filtered.", bgpPeerLabels),
 		"state":                 colPromDesc(bgpSubsystem, "peer_state", "State of the peer (2 = Administratively Down, 1 = Established, 0 = Down).", bgpPeerLabels),
 		"UptimeSec":             colPromDesc(bgpSubsystem, "peer_uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
 		"peerTypesUp":           colPromDesc(bgpSubsystem, "peer_types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
@@ -207,7 +210,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 	}
 
 	peerTypes := make(map[string]map[string]float64)
-	wgAdvertisedPrefixes := &sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	for vrfName, vrfData := range jsonMap {
 		for safiName, safiData := range vrfData {
 			// The labels are "vrf", "afi",  "safi", "local_as"
@@ -255,8 +258,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					if peerData.PfxSnt != nil {
 						newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(*peerData.PfxSnt), peerLabels...)
 					} else if *bgpAdvertisedPrefixes {
-						wgAdvertisedPrefixes.Add(1)
-						go getPeerAdvertisedPrefixes(ch, wgAdvertisedPrefixes, AFI, safiName[4:], vrfName, peerIP, logger, bgpDesc, peerLabels...)
+						wg.Add(1)
+						go getPeerAdvertisedPrefixes(ch, wg, AFI, safiName[4:], vrfName, peerIP, logger, bgpDesc, peerLabels...)
 					}
 
 					newCounter(ch, bgpDesc["msgRcvd"], float64(peerData.MsgRcvd), peerLabels...)
@@ -271,6 +274,11 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 						prefixReceived = float64(peerData.PfxRcd)
 					}
 					newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
+
+					if *bgpAcceptedFilteredPrefixes {
+						wg.Add(1)
+						go getPeerAcceptedFilteredRoutes(ch, wg, AFI, safiName[4:], vrfName, peerIP, prefixReceived, logger, bgpDesc, peerLabels...)
+					}
 
 					var peerDescTypes map[string]string
 					if *bgpPeerTypes {
@@ -313,7 +321,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		}
 	}
 
-	wgAdvertisedPrefixes.Wait()
+	wg.Wait()
 
 	for peerSafi, peerTypesPerSafi := range peerTypes {
 		for peerType, count := range peerTypesPerSafi {
@@ -347,6 +355,39 @@ func getPeerAdvertisedPrefixes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, 
 	}
 
 	newGauge(ch, bgpDesc["prefixAdvertisedCount"], float64(advertisedPrefixes.TotalPrefixCounter), peerLabels...)
+}
+
+type bgpRoutes struct {
+	// We care only about the routes
+	Routes map[string][]json.RawMessage `json:"routes"`
+}
+
+func getPeerAcceptedFilteredRoutes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, prefixesReceived float64, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc, peerLabels ...string) {
+	defer wg.Done()
+
+	var cmd string
+	if strings.ToLower(vrfName) == "default" {
+		cmd = fmt.Sprintf("show bgp  %s %s neighbors %s routes json", strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
+	} else {
+		cmd = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s routes json", vrfName, strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
+	}
+
+	output, err := executeBGPCommand(cmd)
+	if err != nil {
+		logger.Error("get neighbor accepted filtered routes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+
+	var routes bgpRoutes
+	if err := json.Unmarshal(output, &routes); err != nil {
+		logger.Error("get neighbor accepted filtered routes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+
+	prefixesAccepted := float64(len(routes.Routes))
+
+	newGauge(ch, bgpDesc["prefixAcceptedCount"], prefixesAccepted, peerLabels...)
+	newGauge(ch, bgpDesc["prefixFilteredCount"], prefixesReceived-prefixesAccepted, peerLabels...)
 }
 
 type bgpProcess struct {
