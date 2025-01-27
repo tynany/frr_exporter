@@ -24,20 +24,21 @@ Flags:
       --[no-]collector.bgp.peer-types
                                  Enable the frr_bgp_peer_types_up metric (default: disabled).
       --collector.bgp.peer-types.keys=type ...
-                                 Select the keys from the JSON formatted BGP peer description of which the values will be used with the
-                                 frr_bgp_peer_types_up metric. Supports multiple values (default: type).
+                                 Select the keys from the JSON formatted BGP peer description of which the values will be used with the frr_bgp_peer_types_up metric.
+                                 Supports multiple values (default: type).
       --[no-]collector.bgp.peer-descriptions
-                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default:
-                                 disabled).
+                                 Add the value of the desc key from the JSON formatted BGP peer description as a label to peer metrics. (default: disabled).
+      --[no-]collector.bgp.peer-groups
+                                 Adds the peer's peer group name as a label. (default: disabled).
       --[no-]collector.bgp.peer-hostnames
-                                 Add the value of the hostname key from the JSON formatted BGP peer description as a label to peer metrics.
-                                 (default: disabled).
+                                 Adds the peer's hostname as a label. (default: disabled).
       --[no-]collector.bgp.peer-descriptions.plain-text
-                                 Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default:
-                                 disabled).
+                                 Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).
       --[no-]collector.bgp.advertised-prefixes
-                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes
-                                 to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
+                                 Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer.
+                                 This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
+      --[no-]collector.bgp.accepted-filtered-prefixes
+                                 Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).
       --frr.socket.dir-path="/var/run/frr"
                                  Path of of the localstatedir containing each daemon's Unix socket.
       --frr.socket.timeout=20s   Timeout when connecting to the FRR daemon Unix sockets
@@ -59,8 +60,10 @@ Flags:
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
       --web.listen-address=:9342 ...
-                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses.
-      --web.config.file=""       [EXPERIMENTAL] Path to configuration file that can enable TLS or authentication.
+                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses. Examples: `:9100` or `[::1]:9100` for
+                                 http, `vsock://:9100` for vsock
+      --web.config.file=""       Path to configuration file that can enable TLS or authentication. See:
+                                 https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
       --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
       --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
       --[no-]version             Show application version.
