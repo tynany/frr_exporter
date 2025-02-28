@@ -229,6 +229,10 @@ via the `--frr.vtysh` flag for the following reasons:
 * Vtysh does not support `vrf` and `instance` in the same commend. For example,\
 `show ip ospf 1 vrf all interface json` is an invalid command.
 
+## Grafana Dashboards
+
+A dashboard showing metrics from the BGP collector is included in the repository at [dashboards/grafana-bgp.json](dashboards/grafana-bgp.json), contributed by [Mark Dastmalchi-Round](https://markround.com). It is also published on the Grafana Dashboards catalog at [https://grafana.com/grafana/dashboards/22943-frr-exporter-bgp/](https://grafana.com/grafana/dashboards/22943-frr-exporter-bgp/) (along with a link to a live demo instance) where it can be easily added to a Grafana instance. 
+
 ## Development
 
 ### Building
