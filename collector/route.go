@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -45,8 +44,8 @@ func getRouteDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *routeCollector) Update(ch chan<- prometheus.Metric) error {
-	cmdIPv4 := fmt.Sprintf("show ip route vrf all summary json")
-	cmdIPv6 := fmt.Sprintf("show ipv6 route vrf all summary json")
+	cmdIPv4 := "show ip route vrf all summary json"
+	cmdIPv6 := "show ipv6 route vrf all summary json"
 
 	jsonRouteIPv4, err := executeZebraCommand(cmdIPv4)
 	if err != nil {
