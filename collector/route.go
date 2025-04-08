@@ -18,9 +18,8 @@ func init() {
 }
 
 type routeCollector struct {
-	logger         *slog.Logger
-	descriptions   map[string]*prometheus.Desc
-	detailedRoutes bool
+	logger       *slog.Logger
+	descriptions map[string]*prometheus.Desc
 }
 
 // NewRouteCollector collects route summary, implemented as per the Collector interface.
