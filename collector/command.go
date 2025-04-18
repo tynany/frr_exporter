@@ -94,7 +94,7 @@ func execVtyshCommand(vtyshCmd string) ([]byte, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		return stdout.Bytes(), fmt.Errorf("command %s failed: %w: stderr: %s: stdout: %s", cmd, err, strings.Replace(stderr.String(), "\n", " ", -1), strings.Replace(stdout.String(), "\n", " ", -1))
+		return stdout.Bytes(), fmt.Errorf("command %s failed: %w: stderr: %s: stdout: %s", cmd, err, strings.ReplaceAll(stderr.String(), "\n", " "), strings.ReplaceAll(stdout.String(), "\n", " "))
 	}
 
 	return stdout.Bytes(), nil

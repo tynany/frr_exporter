@@ -1,13 +1,32 @@
-linters-settings:
-  errcheck:
-    exclude-functions:
-      - (net/http.ResponseWriter).Write
-
+version: "2"
 linters:
+  enable:
+    - misspell
+    - revive
+    - sloglint
+  settings:
+    errcheck:
+      exclude-functions:
+        - (net/http.ResponseWriter).Write
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
   enable:
     - gofmt
     - gofumpt
     - goimports
-    - misspell
-    - revive
-    - sloglint
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

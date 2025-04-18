@@ -162,9 +162,10 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, desc map[string]*prometheus.Desc) error {
 	SAFI := ""
 
-	if (AFI == "ipv4") || (AFI == "ipv6") {
+	switch AFI {
+	case "ipv4", "ipv6":
 		SAFI = ""
-	} else if AFI == "l2vpn" {
+	case "l2vpn":
 		SAFI = "evpn"
 	}
 	cmd := fmt.Sprintf("show bgp vrf all %s %s summary json", AFI, SAFI)
