@@ -41,7 +41,7 @@ func main() {
 
 	nc, err := collector.NewExporter(logger)
 	if err != nil {
-		panic(fmt.Errorf("Could not create collector: %w", err))
+		panic(fmt.Errorf("could not create collector: %w", err))
 	}
 
 	prometheus.MustRegister(nc)
