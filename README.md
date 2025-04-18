@@ -50,12 +50,17 @@ Flags:
       --frr.vtysh.options=""     Additional options passed to vtysh.
       --collector.ospf.instances=""
                                  Comma-separated list of instance IDs if using multiple OSPF instances
+      --[no-]collector.route.detailed-routes
+                                 Enable detailed route count of each route type (default:
+                                 disabled).
       --[no-]collector.bfd       Enable the bfd collector (default: enabled, to disable use --no-collector.bfd).
       --[no-]collector.bgp       Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
       --[no-]collector.bgp6      Enable the bgp6 collector (default: disabled).
       --[no-]collector.bgpl2vpn  Enable the bgpl2vpn collector (default: disabled).
       --[no-]collector.ospf      Enable the ospf collector (default: enabled, to disable use --no-collector.ospf).
       --[no-]collector.pim       Enable the pim collector (default: disabled).
+      --[no-]collector.route     Enable the route collector (default: enabled, to disable use
+                                 --no-collector.route).
       --[no-]collector.vrrp      Enable the vrrp collector (default: disabled).
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
@@ -119,6 +124,7 @@ Name | Description
 BGP | Per VRF and address family (currently support unicast only) BGP metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer received prefixes<br> - Peer advertised prefixes<br> - Peer state (established/down)<br> - Peer uptime
 OSPFv4 | Per VRF OSPF metrics:<br> - Neighbors<br> - Neighbor adjacencies
 BFD | BFD Peer metrics:<br> - Count of total number of peers<br> - BFD Peer State (up/down)<br> - BFD Peer Uptime in seconds
+Route | Route metrics:<br> - Total number of routes in RIB<br> - Total number of routes in FIB<br> - Number of routes of each type (connected/local/ebgp/ospf) in RIB/FIB
 
 ### Disabled by Default
 
