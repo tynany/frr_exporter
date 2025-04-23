@@ -201,5 +201,4 @@ func TestProcessOSPF(t *testing.T) {
 			t.Errorf("missing metric: %s value %v", expectedMetricName, expectedMetricVal)
 		}
 	}
-
 }
