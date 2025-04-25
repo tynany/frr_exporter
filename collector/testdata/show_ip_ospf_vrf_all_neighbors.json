@@ -1,0 +1,32 @@
+{
+    "default": {
+        "vrfName": "default",
+        "vrfId": 0,
+        "neighbors": {
+            "0.0.35.148": [
+                {
+                    "state": "Full/-",
+                    "role": "DROther",
+                    "ifaceName": "eth0"
+                },
+                {
+                    "state": "Full/-",
+                    "role": "DROther",
+                    "ifaceName": "eth1"
+                }
+            ],
+            "0.0.32.237": [
+                {
+                    "state": "Full/-",
+                    "role": "DROther",
+                    "ifaceName": "eth0"
+                },
+                {
+                    "state": "Full/-",
+                    "role": "DROther",
+                    "ifaceName": "eth1"
+                }
+            ]
+        }
+    }
+}
