@@ -21,9 +21,10 @@ func init() {
 }
 
 type ospfCollector struct {
-	logger       *slog.Logger
-	descriptions map[string]*prometheus.Desc
-	instanceIDs  []int
+	logger                *slog.Logger
+	ospfIfaceDescriptions map[string]*prometheus.Desc
+	ospfDescriptions      map[string]*prometheus.Desc
+	instanceIDs           []int
 }
 
 // NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
@@ -48,10 +49,66 @@ func NewOSPFCollector(logger *slog.Logger) (Collector, error) {
 			instanceIDs = append(instanceIDs, i)
 		}
 	}
-	return &ospfCollector{logger: logger, instanceIDs: instanceIDs, descriptions: getOSPFDesc()}, nil
+	return &ospfCollector{logger: logger, instanceIDs: instanceIDs, ospfIfaceDescriptions: getOSPFIfaceDesc(), ospfDescriptions: getOSPFDesc()}, nil
 }
 
-func getOSPFDesc() map[string]*prometheus.Desc {
+// Update satisfies Collector.
+func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
+	steps := []struct {
+		cmd       string
+		desc      map[string]*prometheus.Desc
+		processor func(chan<- prometheus.Metric, []byte, map[string]*prometheus.Desc, int) error
+	}{
+		{
+			cmd:       "show ip ospf vrf all json",
+			desc:      c.ospfDescriptions,
+			processor: processOSPF,
+		},
+		{
+			cmd:       "show ip ospf vrf all interface json",
+			desc:      c.ospfIfaceDescriptions,
+			processor: processOSPFInterface,
+		},
+	}
+
+	for _, s := range steps {
+		if err := c.update(ch, s.cmd, s.desc, s.processor); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *ospfCollector) update(
+	ch chan<- prometheus.Metric,
+	cmd string,
+	descriptions map[string]*prometheus.Desc,
+	process func(chan<- prometheus.Metric, []byte, map[string]*prometheus.Desc, int) error,
+) error {
+	if len(c.instanceIDs) > 0 {
+		for _, id := range c.instanceIDs {
+			jsonBytes, err := executeOSPFMultiInstanceCommand(cmd, id)
+			if err != nil {
+				return err
+			}
+			if err := process(ch, jsonBytes, descriptions, id); err != nil {
+				return cmdOutputProcessError(cmd, string(jsonBytes), err)
+			}
+		}
+		return nil
+	}
+
+	jsonBytes, err := executeOSPFCommand(cmd)
+	if err != nil {
+		return err
+	}
+	if err := process(ch, jsonBytes, descriptions, 0); err != nil {
+		return cmdOutputProcessError(cmd, string(jsonBytes), err)
+	}
+	return nil
+}
+
+func getOSPFIfaceDesc() map[string]*prometheus.Desc {
 	labels := []string{"vrf", "iface", "area"}
 	if len(*frrOSPFInstances) > 0 {
 		labels = append(labels, "instance")
@@ -62,33 +119,23 @@ func getOSPFDesc() map[string]*prometheus.Desc {
 	}
 }
 
-// Update implemented as per the Collector interface.
-func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
-	cmd := "show ip ospf vrf all interface json"
-
-	if len(c.instanceIDs) > 0 {
-		for _, id := range c.instanceIDs {
-			jsonOSPFInterface, err := executeOSPFMultiInstanceCommand(cmd, id)
-			if err != nil {
-				return err
-			}
-
-			if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions, id); err != nil {
-				return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
-			}
-		}
-		return nil
+func getOSPFDesc() map[string]*prometheus.Desc {
+	routerLabels := []string{"vrf"}
+	areaLabels := []string{"vrf", "area"}
+	if len(*frrOSPFInstances) > 0 {
+		routerLabels = append(routerLabels, "instance")
+		areaLabels = append(areaLabels, "instance")
 	}
 
-	jsonOSPFInterface, err := executeOSPFCommand(cmd)
-	if err != nil {
-		return err
+	return map[string]*prometheus.Desc{
+		"ospfLsaExternalCounter":   colPromDesc(ospfSubsystem, "lsa_external_counter", "Number of external LSAs.", routerLabels),
+		"ospfLsaAsOpaqueCounter":   colPromDesc(ospfSubsystem, "lsa_as_opaque_counter", "Number of AS Opaque LSAs.", routerLabels),
+		"ospfAreaLsaNumber":        colPromDesc(ospfSubsystem, "area_lsa_number", "Number of LSAs in the area.", areaLabels),
+		"ospfAreaLsaNetworkNumber": colPromDesc(ospfSubsystem, "area_lsa_network_number", "Number of network LSAs in the area.", areaLabels),
+		"ospfAreaLsaSummaryNumber": colPromDesc(ospfSubsystem, "area_lsa_summary_number", "Number of summary LSAs in the area.", areaLabels),
+		"ospfAreaLsaAsbrNumber":    colPromDesc(ospfSubsystem, "area_lsa_asbr_number", "Number of ASBR LSAs in the area.", areaLabels),
+		"ospfAreaLsaNssaNumber":    colPromDesc(ospfSubsystem, "area_lsa_nssa_number", "Number of NSSA LSAs in the area.", areaLabels),
 	}
-
-	if err = processOSPFInterface(ch, jsonOSPFInterface, c.descriptions, 0); err != nil {
-		return cmdOutputProcessError(cmd, string(jsonOSPFInterface), err)
-	}
-	return nil
 }
 
 func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {
@@ -129,7 +176,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 					if !newIface.TimerPassiveIface {
 						// The labels are "vrf", "newIface", "area"
 						labels := []string{strings.ToLower(vrfName), interfaceKey, newIface.Area}
-						ospfMetrics(ch, newIface, labels, ospfDesc, instanceID)
+						ospfIfaceMetrics(ch, newIface, labels, ospfDesc, instanceID)
 					}
 				}
 			default:
@@ -141,7 +188,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 				if !iface.TimerPassiveIface {
 					// The labels are "vrf", "iface", "area"
 					labels := []string{strings.ToLower(vrfName), ospfInstanceKey, iface.Area}
-					ospfMetrics(ch, iface, labels, ospfDesc, instanceID)
+					ospfIfaceMetrics(ch, iface, labels, ospfDesc, instanceID)
 				}
 			}
 		}
@@ -149,7 +196,7 @@ func processOSPFInterface(ch chan<- prometheus.Metric, jsonOSPFInterface []byte,
 	return nil
 }
 
-func ospfMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
+func ospfIfaceMetrics(ch chan<- prometheus.Metric, iface ospfIface, labels []string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
 	if instanceID != 0 {
 		labels = append(labels, strconv.Itoa(instanceID))
 	}
@@ -162,4 +209,51 @@ type ospfIface struct {
 	NbrAdjacentCount  uint32
 	Area              string
 	TimerPassiveIface bool
+}
+
+func processOSPF(ch chan<- prometheus.Metric, jsonOSPF []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {
+	var all map[string]ospfInstance
+	if err := json.Unmarshal(jsonOSPF, &all); err != nil {
+		return fmt.Errorf("cannot unmarshal ospf json: %w", err)
+	}
+
+	for vrfName, vrfData := range all {
+		ospfMetrics(ch, vrfData, vrfName, ospfDesc, instanceID)
+	}
+	return nil
+}
+
+func ospfMetrics(ch chan<- prometheus.Metric, ospfData ospfInstance, vrfName string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
+	routerLabels := []string{strings.ToLower(vrfName)}
+	if instanceID != 0 {
+		routerLabels = append(routerLabels, strconv.Itoa(instanceID))
+	}
+	newGauge(ch, ospfDesc["ospfLsaExternalCounter"], float64(ospfData.LsaExternalCounter), routerLabels...)
+	newGauge(ch, ospfDesc["ospfLsaAsOpaqueCounter"], float64(ospfData.LsaAsopaqueCounter), routerLabels...)
+
+	for areaName, area := range ospfData.Areas {
+		areaLabels := []string{strings.ToLower(vrfName), areaName}
+		if instanceID != 0 {
+			areaLabels = append(areaLabels, strconv.Itoa(instanceID))
+		}
+		newGauge(ch, ospfDesc["ospfAreaLsaNumber"], float64(area.LsaNumber), areaLabels...)
+		newGauge(ch, ospfDesc["ospfAreaLsaNetworkNumber"], float64(area.LsaNetworkNumber), areaLabels...)
+		newGauge(ch, ospfDesc["ospfAreaLsaSummaryNumber"], float64(area.LsaSummaryNumber), areaLabels...)
+		newGauge(ch, ospfDesc["ospfAreaLsaAsbrNumber"], float64(area.LsaAsbrNumber), areaLabels...)
+		newGauge(ch, ospfDesc["ospfAreaLsaNssaNumber"], float64(area.LsaNssaNumber), areaLabels...)
+	}
+}
+
+type ospfInstance struct {
+	LsaExternalCounter uint32
+	LsaAsopaqueCounter uint32
+	Areas              map[string]ospfArea
+}
+
+type ospfArea struct {
+	LsaNumber        uint32
+	LsaNetworkNumber uint32
+	LsaSummaryNumber uint32
+	LsaAsbrNumber    uint32
+	LsaNssaNumber    uint32
 }

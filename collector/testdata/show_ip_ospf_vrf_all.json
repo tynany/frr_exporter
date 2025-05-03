@@ -1,0 +1,53 @@
+{
+    "default": {
+        "vrfName": "default",
+        "vrfId": 0,
+        "routerId": "0.0.56.137",
+        "tosRoutesOnly": true,
+        "rfc2328Conform": true,
+        "rfc1583Compatibility": true,
+        "spfScheduleDelayMsecs": 2000,
+        "holdtimeMinMsecs": 5000,
+        "holdtimeMaxMsecs": 20000,
+        "holdtimeMultplier": 1,
+        "spfLastExecutedMsecs": 492410115,
+        "spfLastDurationMsecs": 0,
+        "lsaMinIntervalMsecs": 5000,
+        "lsaMinArrivalMsecs": 5000,
+        "writeMultiplier": 20,
+        "refreshTimerMsecs": 10000,
+        "maximumPaths": 256,
+        "preference": 110,
+        "asbrRouter": "injectingExternalRoutingInformation",
+        "lsaExternalCounter": 109,
+        "lsaExternalChecksum": 3680599,
+        "lsaAsopaqueCounter": 0,
+        "lsaAsOpaqueChecksum": 0,
+        "attachedAreaCounter": 1,
+        "areas": {
+            "0.0.0.0": {
+                "backbone": true,
+                "areaIfTotalCounter": 7,
+                "areaIfActiveCounter": 7,
+                "nbrFullAdjacentCounter": 3,
+                "authentication": "authenticationNone",
+                "spfExecutedCounter": 43,
+                "lsaNumber": 17,
+                "lsaRouterNumber": 16,
+                "lsaRouterChecksum": 539897,
+                "lsaNetworkNumber": 1,
+                "lsaNetworkChecksum": 6844,
+                "lsaSummaryNumber": 0,
+                "lsaSummaryChecksum": 0,
+                "lsaAsbrNumber": 0,
+                "lsaAsbrChecksum": 0,
+                "lsaNssaNumber": 0,
+                "lsaNssaChecksum": 0,
+                "lsaOpaqueLinkNumber": 0,
+                "lsaOpaqueLinkChecksum": 0,
+                "lsaOpaqueAreaNumber": 0,
+                "lsaOpaqueAreaChecksum": 0
+            }
+        }
+    }
+}
