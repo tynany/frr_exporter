@@ -155,9 +155,9 @@ func getOSPFNeighDesc() map[string]*prometheus.Desc {
 	if len(*frrOSPFInstances) > 0 {
 		labels = append(labels, "instance")
 	}
-	labels = append(labels, "vrf", "neighbor", "iface", "state")
+	labels = append(labels, "vrf", "neighbor", "iface", "local_address", "remote_address")
 	return map[string]*prometheus.Desc{
-		"ospfNeighState": colPromDesc(ospfSubsystem, "neighbor_state", "OSPF neighbor state.", labels),
+		"ospfNeighState": colPromDesc(ospfSubsystem, "neighbor_state", "OSPF neighbor state (1=Down, 2=Init, 3=2-Way, 4=ExStart, 5=Exchange, 6=Loading, 7=Full).", labels),
 	}
 }
 
@@ -313,7 +313,26 @@ func ospfNeighMetrics(ch chan<- prometheus.Metric, neighborName string, neighbor
 	}
 	labels = append(labels, strings.ToLower(vrfName), neighborName)
 	for _, neighbor := range neighbors {
-		newGauge(ch, ospfDesc["ospfNeighState"], 1, append(labels, neighbor.IfaceName, neighbor.State)...)
+		var state float64
+		switch neighbor.State {
+		case "Down":
+			state = 1
+		case "Init":
+			state = 2
+		case "2-Way":
+			state = 3
+		case "ExStart":
+			state = 4
+		case "Exchange":
+			state = 5
+		case "Loading":
+			state = 6
+		case "Full":
+			state = 7
+		default:
+			continue
+		}
+		newGauge(ch, ospfDesc["ospfNeighState"], state, append(labels, neighbor.IfaceName, neighbor.LocalAddress, neighbor.RemoteAddress)...)
 	}
 }
 
@@ -323,8 +342,42 @@ type vrfNeighbors struct {
 }
 
 type ospfNeighbor struct {
-	State     string
-	IfaceName string
+	State         string `json:"state"`
+	IfaceName     string `json:"ifaceName"`
+	LocalAddress  string `json:"localAddress"`
+	RemoteAddress string `json:"address"`
+}
+
+func (n *ospfNeighbor) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		State      string `json:"state"`
+		IfaceName  string `json:"ifaceName"`
+		LocalAddr  string `json:"localAddress"`
+		RemoteAddr string `json:"address"`
+	}
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return fmt.Errorf("cannot unmarshal ospf neighbor json: %w", err)
+	}
+
+	iface := strings.Split(temp.IfaceName, ":")
+	if len(iface) == 2 {
+		n.IfaceName = iface[0]
+		n.LocalAddress = iface[1]
+	} else {
+		return fmt.Errorf("cannot unmarshal ospf neighbor iface: %s", iface)
+	}
+
+	state := strings.Split(temp.State, "/")
+	if len(state) > 0 {
+		n.State = state[0]
+	} else {
+		return fmt.Errorf("cannot unmarshal ospf neighbor state: %s", state)
+	}
+
+	n.RemoteAddress = temp.RemoteAddr
+
+	return nil
 }
 
 func processOSPFDataMaxAge(ch chan<- prometheus.Metric, jsonOSPFMaxAge []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {

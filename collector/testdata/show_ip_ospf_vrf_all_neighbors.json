@@ -7,24 +7,28 @@
                 {
                     "state": "Full/-",
                     "role": "DROther",
-                    "ifaceName": "eth0"
+                    "ifaceName": "eth0:192.168.1.2",
+                    "address": "192.168.1.3"
                 },
                 {
-                    "state": "Full/-",
+                    "state": "ExStart/-",
                     "role": "DROther",
-                    "ifaceName": "eth1"
+                    "ifaceName": "eth1:192.168.2.2",
+                    "address": "192.168.2.3"
                 }
             ],
             "0.0.32.237": [
                 {
-                    "state": "Full/-",
+                    "state": "Loading/-",
                     "role": "DROther",
-                    "ifaceName": "eth0"
+                    "ifaceName": "eth0:192.168.3.2",
+                    "address": "192.168.3.3"
                 },
                 {
-                    "state": "Full/-",
+                    "state": "ExStart/-",
                     "role": "DROther",
-                    "ifaceName": "eth1"
+                    "ifaceName": "eth1:192.168.4.2",
+                    "address": "192.168.4.3"
                 }
             ]
         }
