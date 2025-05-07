@@ -21,10 +21,12 @@ func init() {
 }
 
 type ospfCollector struct {
-	logger                *slog.Logger
-	ospfIfaceDescriptions map[string]*prometheus.Desc
-	ospfDescriptions      map[string]*prometheus.Desc
-	instanceIDs           []int
+	logger                     *slog.Logger
+	ospfIfaceDescriptions      map[string]*prometheus.Desc
+	ospfDescriptions           map[string]*prometheus.Desc
+	ospfNeighDescriptions      map[string]*prometheus.Desc
+	ospfDataMaxAgeDescriptions map[string]*prometheus.Desc
+	instanceIDs                []int
 }
 
 // NewOSPFCollector  collects OSPF metrics, implemented as per the Collector interface.
@@ -49,7 +51,7 @@ func NewOSPFCollector(logger *slog.Logger) (Collector, error) {
 			instanceIDs = append(instanceIDs, i)
 		}
 	}
-	return &ospfCollector{logger: logger, instanceIDs: instanceIDs, ospfIfaceDescriptions: getOSPFIfaceDesc(), ospfDescriptions: getOSPFDesc()}, nil
+	return &ospfCollector{logger: logger, instanceIDs: instanceIDs, ospfIfaceDescriptions: getOSPFIfaceDesc(), ospfDescriptions: getOSPFDesc(), ospfNeighDescriptions: getOSPFNeighDesc(), ospfDataMaxAgeDescriptions: getOSPFDataMaxAgeDesc()}, nil
 }
 
 // Update satisfies Collector.
@@ -68,6 +70,16 @@ func (c *ospfCollector) Update(ch chan<- prometheus.Metric) error {
 			cmd:       "show ip ospf vrf all interface json",
 			desc:      c.ospfIfaceDescriptions,
 			processor: processOSPFInterface,
+		},
+		{
+			cmd:       "show ip ospf vrf all neighbor json",
+			desc:      c.ospfNeighDescriptions,
+			processor: processOSPFNeigh,
+		},
+		{
+			cmd:       "show ip ospf vrf all database max-age json",
+			desc:      c.ospfDataMaxAgeDescriptions,
+			processor: processOSPFDataMaxAge,
 		},
 	}
 
@@ -135,6 +147,28 @@ func getOSPFDesc() map[string]*prometheus.Desc {
 		"ospfAreaLsaSummaryNumber": colPromDesc(ospfSubsystem, "area_lsa_summary_number", "Number of summary LSAs in the area.", areaLabels),
 		"ospfAreaLsaAsbrNumber":    colPromDesc(ospfSubsystem, "area_lsa_asbr_number", "Number of ASBR LSAs in the area.", areaLabels),
 		"ospfAreaLsaNssaNumber":    colPromDesc(ospfSubsystem, "area_lsa_nssa_number", "Number of NSSA LSAs in the area.", areaLabels),
+	}
+}
+
+func getOSPFNeighDesc() map[string]*prometheus.Desc {
+	var labels []string
+	if len(*frrOSPFInstances) > 0 {
+		labels = append(labels, "instance")
+	}
+	labels = append(labels, "vrf", "neighbor", "iface", "local_address", "remote_address")
+	return map[string]*prometheus.Desc{
+		"ospfNeighState": colPromDesc(ospfSubsystem, "neighbor_state", "OSPF neighbor state (1=Down, 2=Init, 3=2-Way, 4=ExStart, 5=Exchange, 6=Loading, 7=Full).", labels),
+	}
+}
+
+func getOSPFDataMaxAgeDesc() map[string]*prometheus.Desc {
+	var labels []string
+	if len(*frrOSPFInstances) > 0 {
+		labels = append(labels, "instance")
+	}
+	labels = append(labels, "vrf")
+	return map[string]*prometheus.Desc{
+		"ospfDataMaxAge": colPromDesc(ospfSubsystem, "data_ls_max_age", "Amount of link state max age entries.", labels),
 	}
 }
 
@@ -256,4 +290,117 @@ type ospfArea struct {
 	LsaSummaryNumber uint32
 	LsaAsbrNumber    uint32
 	LsaNssaNumber    uint32
+}
+
+func processOSPFNeigh(ch chan<- prometheus.Metric, jsonOSPFNeigh []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {
+	var vrfNeighs map[string]vrfNeighbors
+	if err := json.Unmarshal(jsonOSPFNeigh, &vrfNeighs); err != nil {
+		return fmt.Errorf("cannot unmarshal ospf neighbor json: %w", err)
+	}
+	for vrfName, vrfData := range vrfNeighs {
+		for neighborName, neighbors := range vrfData.Neighbors {
+			ospfNeighMetrics(ch, neighborName, neighbors, vrfName, ospfDesc, instanceID)
+		}
+	}
+
+	return nil
+}
+
+func ospfNeighMetrics(ch chan<- prometheus.Metric, neighborName string, neighbors []ospfNeighbor, vrfName string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
+	var labels []string
+	if instanceID != 0 {
+		labels = append(labels, strconv.Itoa(instanceID))
+	}
+	labels = append(labels, strings.ToLower(vrfName), neighborName)
+	for _, neighbor := range neighbors {
+		var state float64
+		switch neighbor.State {
+		case "Down":
+			state = 1
+		case "Init":
+			state = 2
+		case "2-Way":
+			state = 3
+		case "ExStart":
+			state = 4
+		case "Exchange":
+			state = 5
+		case "Loading":
+			state = 6
+		case "Full":
+			state = 7
+		default:
+			continue
+		}
+		newGauge(ch, ospfDesc["ospfNeighState"], state, append(labels, neighbor.IfaceName, neighbor.LocalAddress, neighbor.RemoteAddress)...)
+	}
+}
+
+type vrfNeighbors struct {
+	VRFName   string
+	Neighbors map[string][]ospfNeighbor
+}
+
+type ospfNeighbor struct {
+	State         string `json:"state"`
+	IfaceName     string `json:"ifaceName"`
+	LocalAddress  string `json:"localAddress"`
+	RemoteAddress string `json:"address"`
+}
+
+func (n *ospfNeighbor) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		State      string `json:"state"`
+		IfaceName  string `json:"ifaceName"`
+		LocalAddr  string `json:"localAddress"`
+		RemoteAddr string `json:"address"`
+	}
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return fmt.Errorf("cannot unmarshal ospf neighbor json: %w", err)
+	}
+
+	iface := strings.Split(temp.IfaceName, ":")
+	if len(iface) == 2 {
+		n.IfaceName = iface[0]
+		n.LocalAddress = iface[1]
+	} else {
+		return fmt.Errorf("cannot unmarshal ospf neighbor iface: %s", iface)
+	}
+
+	state := strings.Split(temp.State, "/")
+	if len(state) > 0 {
+		n.State = state[0]
+	} else {
+		return fmt.Errorf("cannot unmarshal ospf neighbor state: %s", state)
+	}
+
+	n.RemoteAddress = temp.RemoteAddr
+
+	return nil
+}
+
+func processOSPFDataMaxAge(ch chan<- prometheus.Metric, jsonOSPFMaxAge []byte, ospfDesc map[string]*prometheus.Desc, instanceID int) error {
+	var all map[string]ospfDataMaxAge
+	if err := json.Unmarshal(jsonOSPFMaxAge, &all); err != nil {
+		return fmt.Errorf("cannot unmarshal ospf max age json: %w", err)
+	}
+
+	for vrfName, vrfData := range all {
+		ospfDataMaxAgeMetrics(ch, vrfData, vrfName, ospfDesc, instanceID)
+	}
+	return nil
+}
+
+func ospfDataMaxAgeMetrics(ch chan<- prometheus.Metric, ospfData ospfDataMaxAge, vrfName string, ospfDesc map[string]*prometheus.Desc, instanceID int) {
+	labels := []string{strings.ToLower(vrfName)}
+	if instanceID != 0 {
+		labels = append(labels, strconv.Itoa(instanceID))
+	}
+	newGauge(ch, ospfDesc["ospfDataMaxAge"], float64(len(ospfData.MaxAgeLinkStates)), labels...)
+}
+
+type ospfDataMaxAge struct {
+	VRFName          string
+	MaxAgeLinkStates map[string]struct{}
 }
