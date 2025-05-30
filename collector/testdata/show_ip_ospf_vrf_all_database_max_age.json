@@ -1,0 +1,11 @@
+{
+    "default":{
+      "vrfName":"default",
+      "vrfId":0,
+      "routerId":"0.2.81.82",
+      "maxAgeLinkStates":{
+        "10.1.0.0":{},
+        "10.2.0.0":{}
+      }
+    }
+  }
