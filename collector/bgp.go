@@ -188,7 +188,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		// since we need to massage the format a bit, unmarshall into a temp variable
 		var tempJSONMap map[string]bgpProcess
 		if err := json.Unmarshal(jsonBGPSum, &tempJSONMap); err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal BGP summary (AFI=%s, SAFI=%s): %v\nJSON snippet: %.200s",
+                AFI, SAFI, err, string(jsonBGPSum))
 		}
 		jsonMap = map[string]map[string]bgpProcess{}
 		for vrfName, vrfData := range tempJSONMap {
@@ -198,6 +199,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		// we have the format we expect, unmarshall directly into jsonMap
 		if err := json.Unmarshal(jsonBGPSum, &jsonMap); err != nil {
 			return err
+			return fmt.Errorf("failed to unmarshal BGP summary (AFI=%s, SAFI=%s): %v\nJSON snippet: %.200s",
+                AFI, SAFI, err, string(jsonBGPSum))
 		}
 	}
 
@@ -429,7 +432,8 @@ func getBGPPeerDesc() (map[string]bgpVRF, error) {
 func processBGPPeerDesc(output []byte) (map[string]bgpVRF, error) {
 	vrfMap := make(map[string]bgpVRF)
 	if err := json.Unmarshal([]byte(output), &vrfMap); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal BGP peer descriptions: %v\nJSON snippet: %.200s",
+            err, string(output))
 	}
 	return vrfMap, nil
 }
