@@ -269,7 +269,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					}
 
 					if *bgpNextHopInterface {
-						var familyMap = map[string]map[string]bgpNextHopInterfaces{
+						familyMap := map[string]map[string]bgpNextHopInterfaces{
 							"ipv4": bgpNextHop[vrfName].IPv4,
 							"ipv6": bgpNextHop[vrfName].IPv6,
 						}
