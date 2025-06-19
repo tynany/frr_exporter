@@ -23,7 +23,7 @@ var (
 	bgpPeerDescsText            = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
 	bgpAdvertisedPrefixes       = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
 	bgpAcceptedFilteredPrefixes = kingpin.Flag("collector.bgp.accepted-filtered-prefixes", "Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).").Default("False").Bool()
-	bgpNextHopInterface         = kingpin.Flag("collector.bgp.next-hop-interface", "Add next-hop interface to bgp peer state metric (default: disabled).").Default("False").Bool()
+	bgpNextHopInterface         = kingpin.Flag("collector.bgp.next-hop-interface", "Adds the peer's next-hop interface label. (default: disabled).").Default("False").Bool()
 )
 
 func init() {
