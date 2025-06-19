@@ -1,0 +1,41 @@
+{
+  "default":{
+    "ipv4":{
+      "10.1.2.1":{
+        "valid":true,
+        "complete":true,
+        "igpMetric":0,
+        "pathCount":0,
+        "peer":"10.1.2.1",
+        "resolvedPrefix":"10.1.2.0/24",
+        "nexthops":[
+          {
+            "interfaceName":"eth1"
+          }
+        ],
+        "lastUpdate":{
+          "epoch":1750342037,
+          "string":"Thu Jun 19 14:07:17 2025\n"
+        }
+      },
+      "10.2.2.1":{
+        "valid":true,
+        "complete":true,
+        "igpMetric":0,
+        "pathCount":0,
+        "peer":"10.2.2.1",
+        "resolvedPrefix":"10.2.2.0/24",
+        "nexthops":[
+          {
+            "interfaceName":"eth2"
+          }
+        ],
+        "lastUpdate":{
+          "epoch":1750342037,
+          "string":"Thu Jun 19 14:07:17 2025\n"
+        }
+      }
+    },
+    "ipv6":{}
+  }
+}
