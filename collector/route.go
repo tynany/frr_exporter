@@ -69,7 +69,14 @@ func (c *routeCollector) Update(ch chan<- prometheus.Metric) error {
 func processRouteSummaries(ch chan<- prometheus.Metric, jsonRoute []byte, afi string, routeDesc map[string]*prometheus.Desc) error {
 	var routeSummaries map[string]routeSummary
 	if err := json.Unmarshal(jsonRoute, &routeSummaries); err != nil {
-		return err
+		// fallback for older FRR versions that do not return the VRF key
+		var single routeSummary
+		if err2 := json.Unmarshal(jsonRoute, &single); err2 != nil {
+			return err2
+		}
+		routeSummaries = map[string]routeSummary{
+			"default": single,
+		}
 	}
 
 	for vrf, routeSummary := range routeSummaries {
