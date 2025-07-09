@@ -39,6 +39,8 @@ Flags:
                                  This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
       --[no-]collector.bgp.accepted-filtered-prefixes
                                  Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).
+      --[no-]collector.bgp.next-hop-interface  
+                                 Adds the peer's next-hop interface label. (default: disabled).                                 
       --frr.socket.dir-path="/var/run/frr"
                                  Path of of the localstatedir containing each daemon's Unix socket.
       --frr.socket.timeout=20s   Timeout when connecting to the FRR daemon Unix sockets
