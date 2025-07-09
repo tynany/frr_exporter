@@ -23,6 +23,7 @@ var (
 	bgpPeerDescsText            = kingpin.Flag("collector.bgp.peer-descriptions.plain-text", "Use the full text field of the BGP peer description instead of the value of the JSON formatted desc key (default: disabled).").Default("False").Bool()
 	bgpAdvertisedPrefixes       = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
 	bgpAcceptedFilteredPrefixes = kingpin.Flag("collector.bgp.accepted-filtered-prefixes", "Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).").Default("False").Bool()
+	bgpNextHopInterface         = kingpin.Flag("collector.bgp.next-hop-interface", "Adds the peer's next-hop interface label. (default: disabled).").Default("False").Bool()
 )
 
 func init() {
@@ -57,6 +58,10 @@ func getBGPDesc() map[string]*prometheus.Desc {
 
 	if *bgpPeerGroups {
 		bgpPeerLabels = append(bgpPeerLabels, "peer_group")
+	}
+
+	if *bgpNextHopInterface {
+		bgpPeerLabels = append(bgpPeerLabels, "nexthop_interface")
 	}
 
 	return map[string]*prometheus.Desc{
@@ -210,6 +215,14 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 		}
 	}
 
+	var bgpNextHop map[string]bgpNextHop
+	if *bgpNextHopInterface {
+		bgpNextHop, err = getBGPNexthop()
+		if err != nil {
+			return err
+		}
+	}
+
 	peerTypes := make(map[string]map[string]float64)
 	wg := &sync.WaitGroup{}
 	for vrfName, vrfData := range jsonMap {
@@ -253,6 +266,24 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 
 					if *bgpPeerGroups {
 						peerLabels = append(peerLabels, peerDesc[vrfName].BGPNeighbors[peerIP].PeerGroup)
+					}
+
+					if *bgpNextHopInterface {
+						familyMap := map[string]map[string]bgpNextHopInterfaces{
+							"ipv4": bgpNextHop[vrfName].IPv4,
+							"ipv6": bgpNextHop[vrfName].IPv6,
+						}
+						key := strings.ToLower(AFI)
+						if nexthop, ok := familyMap[key][peerIP]; !ok {
+							logger.Warn("BGP next hop not found", "afi", AFI, "peer", peerIP)
+							peerLabels = append(peerLabels, "unknown")
+						} else {
+							if len(nexthop.Nexthops) > 0 {
+								peerLabels = append(peerLabels, nexthop.Nexthops[0].InterfaceName)
+							} else {
+								peerLabels = append(peerLabels, "unknown")
+							}
+						}
 					}
 
 					// In earlier versions of FRR did not expose a summary of advertised prefixes for all peers, but in later versions it can get with PfxSnt field.
@@ -475,4 +506,31 @@ type bgpVRF struct {
 type bgpNeighbor struct {
 	Desc      string `json:"nbrDesc"`
 	PeerGroup string `json:"peerGroup"`
+}
+
+type bgpNextHopInterfaces struct {
+	Nexthops []struct {
+		InterfaceName string `json:"interfaceName"`
+	} `json:"nexthops"`
+}
+
+type bgpNextHop struct {
+	IPv4 map[string]bgpNextHopInterfaces
+	IPv6 map[string]bgpNextHopInterfaces
+}
+
+func getBGPNexthop() (map[string]bgpNextHop, error) {
+	output, err := executeBGPCommand("show ip bgp vrf all nexthop json")
+	if err != nil {
+		return nil, err
+	}
+	return processBGPNexthop(output)
+}
+
+func processBGPNexthop(output []byte) (map[string]bgpNextHop, error) {
+	bgpNextHop := make(map[string]bgpNextHop)
+	if err := json.Unmarshal([]byte(output), &bgpNextHop); err != nil {
+		return nil, err
+	}
+	return bgpNextHop, nil
 }
