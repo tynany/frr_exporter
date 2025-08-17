@@ -341,8 +341,16 @@ type vrfNeighbors struct {
 	Neighbors map[string][]ospfNeighbor
 }
 
+func GetOSPFState(nbrState, state string) string {
+	if nbrState != "" {
+		return nbrState
+	}
+	return state
+}
+
 type ospfNeighbor struct {
 	State         string `json:"state"`
+	NbrState      string `json:"nbrState"`
 	IfaceName     string `json:"ifaceName"`
 	LocalAddress  string `json:"localAddress"`
 	RemoteAddress string `json:"address"`
@@ -350,6 +358,7 @@ type ospfNeighbor struct {
 
 func (n *ospfNeighbor) UnmarshalJSON(data []byte) error {
 	var temp struct {
+		NbrState   string `json:"nbrState"`
 		State      string `json:"state"`
 		IfaceName  string `json:"ifaceName"`
 		LocalAddr  string `json:"localAddress"`
@@ -368,7 +377,7 @@ func (n *ospfNeighbor) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("cannot unmarshal ospf neighbor iface: %s", iface)
 	}
 
-	state := strings.Split(temp.State, "/")
+	state := strings.Split(GetOSPFState(temp.NbrState, temp.State), "/")
 	if len(state) > 0 {
 		n.State = state[0]
 	} else {

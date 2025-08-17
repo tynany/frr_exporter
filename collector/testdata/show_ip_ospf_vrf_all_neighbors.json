@@ -5,7 +5,7 @@
         "neighbors": {
             "0.0.35.148": [
                 {
-                    "state": "Full/-",
+                    "nbrState": "Full/-",
                     "role": "DROther",
                     "ifaceName": "eth0:192.168.1.2",
                     "address": "192.168.1.3"
@@ -25,7 +25,7 @@
                     "address": "192.168.3.3"
                 },
                 {
-                    "state": "ExStart/-",
+                    "nbrState": "ExStart/-",
                     "role": "DROther",
                     "ifaceName": "eth1:192.168.4.2",
                     "address": "192.168.4.3"
