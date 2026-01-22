@@ -76,7 +76,7 @@ func processStatusVersion(output []byte) (string, string, error) {
 	firstLine := lines[0]
 
 	// Extract version using regex: FRRouting VERSION (...)
-	versionRegex := regexp.MustCompile(`FRRouting ([0-9]+\.[0-9]+\.[0-9]+)`)
+	versionRegex := regexp.MustCompile(`FRRouting (\S+)`)
 	versionMatch := versionRegex.FindStringSubmatch(firstLine)
 	if len(versionMatch) < 2 {
 		return "", "", fmt.Errorf("could not extract version from: %s", firstLine)
