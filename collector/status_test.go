@@ -35,6 +35,25 @@ func TestProcessStatusVersion(t *testing.T) {
 	}
 }
 
+func TestProcessStatusVersionGit(t *testing.T) {
+	fixture := readTestFixture(t, "show_version_git.txt")
+
+	version, os, err := processStatusVersion(fixture)
+	if err != nil {
+		t.Errorf("error calling processStatusVersion: %s", err)
+	}
+
+	expectedVersion := "9.1_git"
+	if version != expectedVersion {
+		t.Errorf("expected version %s, got %s", expectedVersion, version)
+	}
+
+	expectedOS := "Linux(6.12.43-talos)"
+	if os != expectedOS {
+		t.Errorf("expected os %s, got %s", expectedOS, os)
+	}
+}
+
 func TestProcessStatusVersionWithMetrics(t *testing.T) {
 	fixture := readTestFixture(t, "show_version.txt")
 

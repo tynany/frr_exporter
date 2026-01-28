@@ -1,0 +1,4 @@
+FRRouting 9.1_git (router) on Linux(6.12.43-talos).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+ configured with:
+     '--prefix=/usr' '--sbindir=/usr/lib/frr' '--sysconfdir=/etc/frr' '--libdir=/usr/lib' '--localstatedir=/var/run/frr' '--enable-rpki' '--enable-vtysh' '--enable-multipath=64' '--enable-vty-group=frrvty' '--enable-user=frr' '--enable-group=frr' '--enable-pcre2posix' '--enable-scripting' 'CC=gcc' 'CXX=g++'\n
