@@ -1,5 +1,5 @@
 # Whenever the Go version is updated here, .circle/config.yml and .promu.yml should also be updated.
-FROM golang:1.23
+FROM golang:1.25
 WORKDIR /go/src/github.com/tynany/frr_exporter
 COPY . /go/src/github.com/tynany/frr_exporter
 RUN make setup_promu
