@@ -3,7 +3,7 @@ executors:
   golang:
     docker:
       # Whenever the Go version is updated here, .promu.yml, Dockerfile and line 6 of this file should also be updated.
-      - image: cimg/go:1.23
+      - image: cimg/go:1.25
 jobs:
   test:
     executor: golang
