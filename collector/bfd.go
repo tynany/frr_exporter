@@ -25,7 +25,7 @@ func NewBFDCollector(logger *slog.Logger) (Collector, error) {
 
 func getBFDDesc() map[string]*prometheus.Desc {
 	countLabels := []string{}
-	peerLabels := []string{"local", "peer"}
+	peerLabels := []string{"local", "peer", "iface", "vrf"}
 	return map[string]*prometheus.Desc{
 		"bfdPeerCount":  colPromDesc(bfdSubsystem, "peer_count", "Number of peers detected.", countLabels),
 		"bfdPeerUptime": colPromDesc(bfdSubsystem, "peer_uptime", "Uptime of bfd peer in seconds", peerLabels),
@@ -57,7 +57,7 @@ func processBFDPeers(ch chan<- prometheus.Metric, jsonBFDInterface []byte, bfdDe
 
 	for _, p := range bfdPeers {
 
-		labels := []string{p.Local, p.Peer}
+		labels := []string{p.Local, p.Peer, p.Interface, p.Vrf}
 
 		// get the uptime of the connection to the peer in seconds
 		newGauge(ch, bfdDesc["bfdPeerUptime"], float64(p.Uptime), labels...)
@@ -76,6 +76,7 @@ type bfdPeer struct {
 	Multihop               bool   `json:"multihop"`
 	Peer                   string `json:"peer"`
 	Local                  string `json:"local"`
+	Interface              string `json:"interface"`
 	Vrf                    string `json:"vrf"`
 	ID                     uint32 `json:"id"`
 	RemoteID               uint32 `json:"remote-id"`
