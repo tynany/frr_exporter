@@ -1,0 +1,72 @@
+services:
+  router1:
+    image: quay.io/frrouting/frr:${FRR_VERSION:-10.5.1}
+    container_name: frr-router1
+    hostname: router1
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.rp_filter=0
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    volumes:
+      - ./configs/router1.conf:/etc/frr/frr.conf:ro
+      - ./configs/daemons:/etc/frr/daemons:ro
+      - ./configs/startup.sh:/startup.sh:ro
+    entrypoint: ["/bin/bash", "/startup.sh"]
+    ports:
+      - "9342:9342"
+    networks:
+      backbone:
+        ipv4_address: 10.0.0.10
+      vrf-red:
+        ipv4_address: 10.1.0.10
+    healthcheck:
+      test: ["CMD", "vtysh", "-c", "show version"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  router2:
+    image: quay.io/frrouting/frr:${FRR_VERSION:-10.5.1}
+    container_name: frr-router2
+    hostname: router2
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.rp_filter=0
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    volumes:
+      - ./configs/router2.conf:/etc/frr/frr.conf:ro
+      - ./configs/daemons:/etc/frr/daemons:ro
+      - ./configs/startup.sh:/startup.sh:ro
+    entrypoint: ["/bin/bash", "/startup.sh"]
+    ports:
+      - "9343:9342"
+    networks:
+      backbone:
+        ipv4_address: 10.0.0.11
+      vrf-red:
+        ipv4_address: 10.1.0.11
+    healthcheck:
+      test: ["CMD", "vtysh", "-c", "show version"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  backbone:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+  vrf-red:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.1.0.0/24

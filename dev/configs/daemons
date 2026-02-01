@@ -1,0 +1,31 @@
+# FRR daemons configuration for frr_exporter testing
+# Enable all daemons needed by collectors
+
+zebrad=yes
+bgpd=yes
+ospfd=yes
+ospf6d=no
+ripd=no
+ripngd=no
+isisd=no
+pimd=yes
+pim6d=no
+ldpd=no
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=no
+bfdd=yes
+fabricd=no
+vrrpd=yes
+pathd=no
+
+# Integrated config mode
+vtysh_enable=yes
+zebra_options="  -A 127.0.0.1 -s 90000000"
+bgpd_options="   -A 127.0.0.1"
+ospfd_options="  -A 127.0.0.1"
+pimd_options="   -A 127.0.0.1"
+bfdd_options="   -A 127.0.0.1"
+vrrpd_options="  -A 127.0.0.1"
