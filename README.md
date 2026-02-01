@@ -251,6 +251,20 @@ cd ${GOPATH}/src/github.com/prometheus/frr_exporter
 go build
 ```
 
+### Dev Environment
+
+A Docker-based development environment is available in the `dev/` directory for testing against real FRR instances. It includes BGP, OSPF, BFD, PIM, and VRRP configurations across multiple VRFs.
+
+```bash
+cd dev
+make up build deploy
+make metrics1
+```
+
+See [dev/README.md](dev/README.md) for full documentation, including macOS setup instructions.
+
+### Linting
+
 This project uses https://golangci-lint.run in GitHub Actions. You can lint your code locally
 before submitting a PR by following the installation instructions at 
 https://golangci-lint.run/usage/install/ and run prior to submitting changes:
