@@ -44,6 +44,7 @@ help:
 	@echo "  make show-bfd                        - Show BFD status"
 	@echo "  make show-pim                        - Show PIM status"
 	@echo "  make show-vrrp                       - Show VRRP status"
+	@echo "  make show-mpls-ldp                   - Show MPLS LDP status"
 	@echo "  make show-routes                     - Show route summary"
 	@echo "  make show-version                    - Show FRR version"
 	@echo "  make logs                            - View FRR container logs"
@@ -185,7 +186,7 @@ vtysh2:
 	docker exec -it frr-router2 vtysh
 
 # Show overall status
-status: show-bgp show-ospf show-bfd show-pim show-vrrp
+status: show-bgp show-ospf show-bfd show-pim show-vrrp show-mpls-ldp
 
 # Show BGP status
 show-bgp:
@@ -220,6 +221,14 @@ show-pim:
 show-vrrp:
 	@echo "=== VRRP Status (Router1) ==="
 	@docker exec frr-router1 vtysh -c "show vrrp" 2>/dev/null
+
+# Show MPLS LDP status
+show-mpls-ldp:
+	@echo "=== MPLS LDP Neighbors (Router1) ==="
+	@docker exec frr-router1 vtysh -c "show mpls ldp neighbor"
+	@echo "=== MPLS LDP Bindings (Router1) ==="
+	@docker exec frr-router1 vtysh -c "show mpls ldp binding"
+
 
 # Show routes
 show-routes:

@@ -7,6 +7,10 @@ import (
 )
 
 func TestProcessMPLSLDPBindings(t *testing.T) {
+	// Enable processing of bindings
+	*mplsLDPBindingInUse = true
+	defer func() { *mplsLDPBindingInUse = false }()
+
 	ch := make(chan prometheus.Metric, 1024)
 	if err := processBindings(ch, readTestFixture(t, "show_mpls_ldp_binding.json"), getMPLSLDPDesc()); err != nil {
 		t.Fatalf("error calling processBindings: %s", err)
