@@ -45,6 +45,10 @@ func (c Connection) ExecZebraCmd(cmd string) ([]byte, error) {
 	return executeCmd(filepath.Join(c.dirPath, "zebra.vty"), cmd, c.timeout)
 }
 
+func (c Connection) ExecLDPDCmd(cmd string) ([]byte, error) {
+	return executeCmd(filepath.Join(c.dirPath, "ldpd.vty"), cmd, c.timeout)
+}
+
 func executeCmd(socketPath, cmd string, timeout time.Duration) ([]byte, error) {
 	var response bytes.Buffer
 

@@ -64,6 +64,13 @@ func executeVRRPCommand(cmd string) ([]byte, error) {
 	return socketConn.ExecVRRPCmd(cmd)
 }
 
+func executeMPLSLDPCommand(cmd string) ([]byte, error) {
+	if *vtyshEnable {
+		return execVtyshCommand(cmd)
+	}
+	return socketConn.ExecLDPDCmd(cmd)
+}
+
 func execVtyshCommand(vtyshCmd string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), *vtyshTimeout)
 	defer cancel()
