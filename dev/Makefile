@@ -90,7 +90,7 @@ restart: down up
 # Build frr_exporter
 build:
 	@echo "Building frr_exporter for Linux:"
-	cd .. && go build -o $(EXPORTER_BIN) .
+	cd .. && CGO_ENABLED=0 go build -o $(EXPORTER_BIN) .
 	@echo "Built: $(EXPORTER_BIN)"
 
 # Deploy exporter to containers and start it
