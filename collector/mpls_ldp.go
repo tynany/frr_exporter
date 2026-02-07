@@ -28,6 +28,7 @@ func NewMPLSLDPCollector(logger *slog.Logger) (Collector, error) {
 
 func getMPLSLDPDesc() map[string]*prometheus.Desc {
 	bindingsLabels := []string{"address_family"}
+	bindingLabels := []string{"address_family", "prefix", "neighbor_id", "local_label", "remote_label"}
 	igpSyncLabels := []string{"interface", "peer_ldp_id"}
 	interfaceLabels := []string{"name", "address_family"}
 	neighborLabels := []string{"address_family", "neighbor_id"}
@@ -35,6 +36,7 @@ func getMPLSLDPDesc() map[string]*prometheus.Desc {
 
 	return map[string]*prometheus.Desc{
 		"bindingCount":            colPromDesc(mplsLdpSubsystem, "binding_count", "Number of MPLS LDP bindings.", bindingsLabels),
+		"bindingInUse":            colPromDesc(mplsLdpSubsystem, "binding_in_use", "Usage status of the MPLS LDP binding (1=In Use, 0=Not In Use).", bindingLabels),
 		"igpSyncState":            colPromDesc(mplsLdpSubsystem, "igp_sync_state", "State of MPLS LDP IGP sync (1=Ready/Complete, 0=Not Complete).", igpSyncLabels),
 		"interfaceState":          colPromDesc(mplsLdpSubsystem, "interface_state", "State of MPLS LDP interface (1=Active, 0=Inactive).", interfaceLabels),
 		"interfaceHelloInterval":  colPromDesc(mplsLdpSubsystem, "interface_hello_interval_seconds", "Hello interval for the interface.", interfaceLabels),
@@ -77,6 +79,11 @@ func (c *mplsLDPCollector) Update(ch chan<- prometheus.Metric) error {
 type mplsLdpBindings struct {
 	Bindings []struct {
 		AddressFamily string `json:"addressFamily"`
+		Prefix        string `json:"prefix"`
+		NeighborID    string `json:"neighborId"`
+		LocalLabel    string `json:"localLabel"`
+		RemoteLabel   string `json:"remoteLabel"`
+		InUse         int    `json:"inUse"`
 	} `json:"bindings"`
 }
 
@@ -101,6 +108,7 @@ func processBindings(ch chan<- prometheus.Metric, output []byte, descs map[strin
 	counts := make(map[string]float64)
 	for _, b := range data.Bindings {
 		counts[b.AddressFamily]++
+		newGauge(ch, descs["bindingInUse"], float64(b.InUse), b.AddressFamily, b.Prefix, b.NeighborID, b.LocalLabel, b.RemoteLabel)
 	}
 
 	for af, count := range counts {

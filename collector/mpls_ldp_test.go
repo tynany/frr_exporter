@@ -15,6 +15,11 @@ func TestProcessMPLSLDPBindings(t *testing.T) {
 
 	expected := map[string]float64{
 		"frr_mpls_ldp_binding_count{address_family=ipv4}": 5,
+		"frr_mpls_ldp_binding_in_use{address_family=ipv4,local_label=imp-null,neighbor_id=0.0.0.0,prefix=2.2.2.2/32,remote_label=-}":  0,
+		"frr_mpls_ldp_binding_in_use{address_family=ipv4,local_label=imp-null,neighbor_id=0.0.0.0,prefix=10.0.0.0/24,remote_label=-}": 0,
+		"frr_mpls_ldp_binding_in_use{address_family=ipv4,local_label=18,neighbor_id=0.0.0.0,prefix=10.1.0.0/24,remote_label=-}":       0,
+		"frr_mpls_ldp_binding_in_use{address_family=ipv4,local_label=16,neighbor_id=0.0.0.0,prefix=192.168.200.0/24,remote_label=-}":  0,
+		"frr_mpls_ldp_binding_in_use{address_family=ipv4,local_label=17,neighbor_id=0.0.0.0,prefix=192.168.201.0/24,remote_label=-}":  0,
 	}
 	got := collectMetrics(t, ch)
 	compareMetrics(t, got, expected)
