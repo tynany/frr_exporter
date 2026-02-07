@@ -6,15 +6,18 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	mplsLdpSubsystem = "mpls_ldp"
+
+	mplsLDPBindingInUse = kingpin.Flag("collector.mpls_ldp.binding-in-use", "Enable the frr_mpls_ldp_binding_in_use metric (default: disabled).").Default("False").Bool()
 )
 
 func init() {
-	registerCollector(mplsLdpSubsystem, enabledByDefault, NewMPLSLDPCollector)
+	registerCollector(mplsLdpSubsystem, disabledByDefault, NewMPLSLDPCollector)
 }
 
 type mplsLDPCollector struct {
@@ -108,7 +111,9 @@ func processBindings(ch chan<- prometheus.Metric, output []byte, descs map[strin
 	counts := make(map[string]float64)
 	for _, b := range data.Bindings {
 		counts[b.AddressFamily]++
-		newGauge(ch, descs["bindingInUse"], float64(b.InUse), b.AddressFamily, b.Prefix, b.NeighborID, b.LocalLabel, b.RemoteLabel)
+		if *mplsLDPBindingInUse {
+			newGauge(ch, descs["bindingInUse"], float64(b.InUse), b.AddressFamily, b.Prefix, b.NeighborID, b.LocalLabel, b.RemoteLabel)
+		}
 	}
 
 	for af, count := range counts {
