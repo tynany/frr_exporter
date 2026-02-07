@@ -105,7 +105,7 @@ func (c *mplsLDPCollector) collectBindings(ch chan<- prometheus.Metric) error {
 func processBindings(ch chan<- prometheus.Metric, output []byte, descs map[string]*prometheus.Desc) error {
 	var data mplsLdpBindings
 	if err := json.Unmarshal(output, &data); err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal mpls ldp binding json: %w", err)
 	}
 
 	counts := make(map[string]float64)
@@ -149,7 +149,7 @@ func (c *mplsLDPCollector) collectIGPSync(ch chan<- prometheus.Metric) error {
 func processIGPSync(ch chan<- prometheus.Metric, output []byte, descs map[string]*prometheus.Desc) error {
 	var data mplsLdpIGPSyncOutput
 	if err := json.Unmarshal(output, &data); err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal mpls ldp igp-sync json: %w", err)
 	}
 
 	for iface, info := range data {
@@ -193,7 +193,7 @@ func (c *mplsLDPCollector) collectInterface(ch chan<- prometheus.Metric) error {
 func processInterface(ch chan<- prometheus.Metric, output []byte, descs map[string]*prometheus.Desc) error {
 	var data mplsLdpInterfaceOutput
 	if err := json.Unmarshal(output, &data); err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal mpls ldp interface json: %w", err)
 	}
 
 	for _, info := range data {
@@ -239,7 +239,7 @@ func (c *mplsLDPCollector) collectNeighbor(ch chan<- prometheus.Metric) error {
 func processNeighbor(ch chan<- prometheus.Metric, output []byte, descs map[string]*prometheus.Desc) error {
 	var data mplsLdpNeighborOutput
 	if err := json.Unmarshal(output, &data); err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal mpls ldp neighbor json: %w", err)
 	}
 
 	for _, n := range data.Neighbors {
@@ -287,7 +287,7 @@ func (c *mplsLDPCollector) collectDiscovery(ch chan<- prometheus.Metric) error {
 func processDiscovery(ch chan<- prometheus.Metric, output []byte, descs map[string]*prometheus.Desc) error {
 	var data mplsLdpDiscoveryOutput
 	if err := json.Unmarshal(output, &data); err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal mpls ldp discovery json: %w", err)
 	}
 
 	counts := make(map[string]float64)

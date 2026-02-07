@@ -109,6 +109,8 @@ deploy: $(EXPORTER_BIN)
 		--collector.bfd \
 		--collector.pim \
 		--collector.vrrp \
+		--collector.mpls_ldp \
+		--collector.mpls_ldp.binding-in-use \
 		--collector.route \
 		--collector.route.detailed-routes \
 		--collector.bgp.peer-descriptions \
@@ -121,6 +123,8 @@ deploy: $(EXPORTER_BIN)
 		--collector.bfd \
 		--collector.pim \
 		--collector.vrrp \
+		--collector.mpls_ldp \
+		--collector.mpls_ldp.binding-in-use \
 		--collector.route \
 		--collector.route.detailed-routes \
 		--collector.bgp.peer-descriptions \
