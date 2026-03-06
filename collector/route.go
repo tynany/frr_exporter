@@ -2,7 +2,9 @@ package collector
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,34 +74,85 @@ func processRouteSummaries(ch chan<- prometheus.Metric, jsonRoute []byte, afi st
 		// fallback for older FRR versions that do not return the VRF key
 		var single routeSummary
 		if err2 := json.Unmarshal(jsonRoute, &single); err2 != nil {
-			return err2
+			// fallback for pre-10.1.0 FRR with multiple VRFs where "vrf all"
+			// produces concatenated (invalid) JSON. Query each VRF individually.
+			return processRouteSummariesPerVRF(ch, afi, routeDesc)
 		}
 		routeSummaries = map[string]routeSummary{
 			"default": single,
 		}
 	}
 
-	for vrf, routeSummary := range routeSummaries {
-
-		// Total routes
-		newGauge(ch, routeDesc["total"], float64(routeSummary.RoutesTotal), afi, vrf)
-
-		// Total FIB routes
-		newGauge(ch, routeDesc["totalFib"], float64(routeSummary.RoutesTotalFib), afi, vrf)
-
-		if *detailedRoutes {
-			for _, route := range routeSummary.Routes {
-				labels := []string{afi, route.Type, vrf}
-
-				newGauge(ch, routeDesc["fibCount"], float64(route.Fib), labels...)
-				newGauge(ch, routeDesc["fibOffloadedCount"], float64(route.FibOffLoaded), labels...)
-				newGauge(ch, routeDesc["fibTrappedCount"], float64(route.FibTrapped), labels...)
-				newGauge(ch, routeDesc["ribCount"], float64(route.Rib), labels...)
-			}
-		}
+	for vrf, rs := range routeSummaries {
+		emitRouteSummaryMetrics(ch, rs, afi, vrf, routeDesc)
 	}
 
 	return nil
+}
+
+func processRouteSummariesPerVRF(ch chan<- prometheus.Metric, afi string, routeDesc map[string]*prometheus.Desc) error {
+	vrfs, err := getVRFs()
+	if err != nil {
+		return err
+	}
+
+	var cmdFmt string
+	if afi == "ipv4" {
+		cmdFmt = "show ip route vrf %s summary json"
+	} else {
+		cmdFmt = "show ipv6 route vrf %s summary json"
+	}
+
+	for _, vrf := range vrfs {
+		cmd := fmt.Sprintf(cmdFmt, vrf)
+		jsonRoute, err := executeZebraCommand(cmd)
+		if err != nil {
+			return err
+		}
+
+		var rs routeSummary
+		if err := json.Unmarshal(jsonRoute, &rs); err != nil {
+			return cmdOutputProcessError(cmd, string(jsonRoute), err)
+		}
+
+		emitRouteSummaryMetrics(ch, rs, afi, vrf, routeDesc)
+	}
+
+	return nil
+}
+
+func emitRouteSummaryMetrics(ch chan<- prometheus.Metric, rs routeSummary, afi string, vrf string, routeDesc map[string]*prometheus.Desc) {
+	newGauge(ch, routeDesc["total"], float64(rs.RoutesTotal), afi, vrf)
+	newGauge(ch, routeDesc["totalFib"], float64(rs.RoutesTotalFib), afi, vrf)
+
+	if *detailedRoutes {
+		for _, route := range rs.Routes {
+			labels := []string{afi, route.Type, vrf}
+			newGauge(ch, routeDesc["fibCount"], float64(route.Fib), labels...)
+			newGauge(ch, routeDesc["fibOffloadedCount"], float64(route.FibOffLoaded), labels...)
+			newGauge(ch, routeDesc["fibTrappedCount"], float64(route.FibTrapped), labels...)
+			newGauge(ch, routeDesc["ribCount"], float64(route.Rib), labels...)
+		}
+	}
+}
+
+func getVRFs() ([]string, error) {
+	output, err := executeZebraCommand("show vrf")
+	if err != nil {
+		return nil, err
+	}
+	return parseVRFs(output), nil
+}
+
+func parseVRFs(output []byte) []string {
+	vrfs := []string{"default"}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == "vrf" {
+			vrfs = append(vrfs, fields[1])
+		}
+	}
+	return vrfs
 }
 
 type routeSummary struct {
