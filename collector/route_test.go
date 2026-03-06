@@ -1,13 +1,9 @@
 package collector
 
 import (
-	"fmt"
-	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 )
 
 var expectedRouteMetrics = map[string]float64{
@@ -77,75 +73,47 @@ var expectedRouteMetrics = map[string]float64{
 	"frr_route_total_fib{afi=ipv6,vrf=red}":                                    218322,
 }
 
+func TestParseVRFs(t *testing.T) {
+	fixture := readTestFixture(t, "show_vrf.txt")
+	got := parseVRFs(fixture)
+	expected := []string{"default", "vrf-red", "vrf-blue"}
+
+	if len(got) != len(expected) {
+		t.Fatalf("expected %d VRFs, got %d: %v", len(expected), len(got), got)
+	}
+	for i, v := range expected {
+		if got[i] != v {
+			t.Errorf("expected VRF[%d] = %q, got %q", i, v, got[i])
+		}
+	}
+}
+
+func TestParseVRFsEmpty(t *testing.T) {
+	fixture := readTestFixture(t, "show_vrf_empty.txt")
+	got := parseVRFs(fixture)
+	if len(got) != 1 || got[0] != "default" {
+		t.Errorf("expected [default], got %v", got)
+	}
+}
+
 func TestProcessRouteSummaries(t *testing.T) {
 	ch := make(chan prometheus.Metric, 1024)
 
 	enableDetailedRoutes := true
 	detailedRoutes = &enableDetailedRoutes
 
-	// Load test data for IPv4
 	jsonRouteIPv4 := readTestFixture(t, "show_ip_route_vrf_all_summary.json")
 	if err := processRouteSummaries(ch, jsonRouteIPv4, "ipv4", getRouteDesc()); err != nil {
-		t.Errorf("error calling processRouteSummaries ipv4: %s", err)
+		t.Fatalf("error calling processRouteSummaries ipv4: %s", err)
 	}
 
-	// Load test data for IPv6
 	jsonRouteIPv6 := readTestFixture(t, "show_ipv6_route_vrf_all_summary.json")
 	if err := processRouteSummaries(ch, jsonRouteIPv6, "ipv6", getRouteDesc()); err != nil {
-		t.Errorf("error calling processRouteSummaries ipv6: %s", err)
+		t.Fatalf("error calling processRouteSummaries ipv6: %s", err)
 	}
 
 	close(ch)
 
-	// Create a map of following format:
-	//   key: metric_name{labelname:labelvalue,...}
-	//   value: metric value
-	gotMetrics := make(map[string]float64)
-
-	for {
-		msg, more := <-ch
-		if !more {
-			break
-		}
-		metric := &dto.Metric{}
-		if err := msg.Write(metric); err != nil {
-			t.Errorf("error writing metric: %s", err)
-		}
-
-		var labels []string
-		for _, label := range metric.GetLabel() {
-			labels = append(labels, fmt.Sprintf("%s=%s", label.GetName(), label.GetValue()))
-		}
-
-		var value float64
-		if metric.GetCounter() != nil {
-			value = metric.GetCounter().GetValue()
-		} else if metric.GetGauge() != nil {
-			value = metric.GetGauge().GetValue()
-		}
-
-		re, err := regexp.Compile(`.*fqName: "(.*)", help:.*`)
-		if err != nil {
-			t.Errorf("could not compile regex: %s", err)
-		}
-		metricName := re.FindStringSubmatch(msg.Desc().String())[1]
-
-		gotMetrics[fmt.Sprintf("%s{%s}", metricName, strings.Join(labels, ","))] = value
-	}
-
-	for metricName, metricVal := range gotMetrics {
-		if expectedMetricVal, ok := expectedRouteMetrics[metricName]; ok {
-			if expectedMetricVal != metricVal {
-				t.Errorf("metric %s expected value %v got %v", metricName, expectedMetricVal, metricVal)
-			}
-		} else {
-			t.Errorf("unexpected metric: %s : %v", metricName, metricVal)
-		}
-	}
-
-	for expectedMetricName, expectedMetricVal := range expectedRouteMetrics {
-		if _, ok := gotMetrics[expectedMetricName]; !ok {
-			t.Errorf("missing metric: %s value %v", expectedMetricName, expectedMetricVal)
-		}
-	}
+	gotMetrics := collectMetrics(t, ch)
+	compareMetrics(t, gotMetrics, expectedRouteMetrics)
 }

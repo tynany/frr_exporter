@@ -1,0 +1,2 @@
+vrf vrf-red id 4 table 10 (configured)
+vrf vrf-blue id 5 table 11 (configured)
