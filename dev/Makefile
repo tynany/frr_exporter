@@ -308,7 +308,7 @@ lima-provision:
 	echo "Starting Docker:"
 	limactl shell $(LIMA_VM) -- sudo systemctl enable docker
 	limactl shell $(LIMA_VM) -- sudo systemctl start docker
-	limactl shell $(LIMA_VM) -- sudo usermod -aG docker $(shell whoami)
+	limactl shell $(LIMA_VM) -- sh -c 'sudo usermod -aG docker "$$(whoami)"'
 	@echo "Installing Go $(GO_VERSION):"
 	limactl shell $(LIMA_VM) -- curl -fsSL https://go.dev/dl/go$(GO_VERSION).linux-arm64.tar.gz -o /tmp/go.tar.gz
 	limactl shell $(LIMA_VM) -- sudo rm -rf /usr/local/go
