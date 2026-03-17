@@ -1,9 +1,12 @@
 package collector
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/netip"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +27,7 @@ var (
 	bgpAdvertisedPrefixes       = kingpin.Flag("collector.bgp.advertised-prefixes", "Enables the frr_exporter_bgp_prefixes_advertised_count_total metric which exports the number of advertised prefixes to a BGP peer. This is an option for older versions of FRR that don't have PfxSent field (default: disabled).").Default("False").Bool()
 	bgpAcceptedFilteredPrefixes = kingpin.Flag("collector.bgp.accepted-filtered-prefixes", "Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).").Default("False").Bool()
 	bgpNextHopInterface         = kingpin.Flag("collector.bgp.next-hop-interface", "Adds the peer's next-hop interface label. (default: disabled).").Default("False").Bool()
+	bgpMonitoredPrefixes        = kingpin.Flag("collector.bgp.monitored-prefixes", "Path to a file listing prefixes to monitor for per-peer presence (one per line, # comments allowed).").Default("").String()
 )
 
 func init() {
@@ -33,14 +37,23 @@ func init() {
 }
 
 type bgpCollector struct {
-	logger       *slog.Logger
-	descriptions map[string]*prometheus.Desc
-	afi          string
+	logger            *slog.Logger
+	descriptions      map[string]*prometheus.Desc
+	afi               string
+	monitoredPrefixes []string
 }
 
 // NewBGPCollector collects BGP metrics, implemented as per the Collector interface.
 func NewBGPCollector(logger *slog.Logger) (Collector, error) {
-	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv4"}, nil
+	var prefixes []string
+	if *bgpMonitoredPrefixes != "" {
+		var err error
+		prefixes, err = loadPrefixFilter(*bgpMonitoredPrefixes)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv4", monitoredPrefixes: prefixes}, nil
 }
 
 func getBGPDesc() map[string]*prometheus.Desc {
@@ -64,6 +77,8 @@ func getBGPDesc() map[string]*prometheus.Desc {
 		bgpPeerLabels = append(bgpPeerLabels, "nexthop_interface")
 	}
 
+	bgpPeerPrefixLabels := append(append([]string{}, bgpPeerLabels...), "prefix")
+
 	return map[string]*prometheus.Desc{
 		"ribCount":              colPromDesc(bgpSubsystem, "rib_count_total", "Number of routes in the RIB.", bgpLabels),
 		"ribMemory":             colPromDesc(bgpSubsystem, "rib_memory_bytes", "Memory consumbed by the RIB.", bgpLabels),
@@ -80,17 +95,27 @@ func getBGPDesc() map[string]*prometheus.Desc {
 		"state":                 colPromDesc(bgpSubsystem, "peer_state", "State of the peer (2 = Administratively Down, 1 = Established, 0 = Down).", bgpPeerLabels),
 		"UptimeSec":             colPromDesc(bgpSubsystem, "peer_uptime_seconds", "How long has the peer been up.", bgpPeerLabels),
 		"peerTypesUp":           colPromDesc(bgpSubsystem, "peer_types_up", "Total Number of Peer Types that are Up.", bgpPeerTypeLabels),
+		"prefixReceived":        colPromDesc(bgpSubsystem, "peer_prefix_received", "Whether a monitored prefix is received from the peer (1 = present, 0 = absent).", bgpPeerPrefixLabels),
+		"prefixAdvertised":      colPromDesc(bgpSubsystem, "peer_prefix_advertised", "Whether a monitored prefix is advertised to the peer (1 = present, 0 = absent).", bgpPeerPrefixLabels),
 	}
 }
 
 // Update implemented as per the Collector interface.
 func (c *bgpCollector) Update(ch chan<- prometheus.Metric) error {
-	return collectBGP(ch, c.afi, c.logger, c.descriptions)
+	return collectBGP(ch, c.afi, c.logger, c.descriptions, c.monitoredPrefixes)
 }
 
 // NewBGP6Collector collects BGPv6 metrics, implemented as per the Collector interface.
 func NewBGP6Collector(logger *slog.Logger) (Collector, error) {
-	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv6"}, nil
+	var prefixes []string
+	if *bgpMonitoredPrefixes != "" {
+		var err error
+		prefixes, err = loadPrefixFilter(*bgpMonitoredPrefixes)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &bgpCollector{logger: logger, descriptions: getBGPDesc(), afi: "ipv6", monitoredPrefixes: prefixes}, nil
 }
 
 type bgpL2VPNCollector struct {
@@ -117,7 +142,7 @@ func getBGPL2VPNDesc() map[string]*prometheus.Desc {
 
 // Update implemented as per the Collector interface.
 func (c *bgpL2VPNCollector) Update(ch chan<- prometheus.Metric) error {
-	if err := collectBGP(ch, "l2vpn", c.logger, c.descriptions); err != nil {
+	if err := collectBGP(ch, "l2vpn", c.logger, c.descriptions, nil); err != nil {
 		return err
 	}
 	cmd := "show evpn vni json"
@@ -164,7 +189,7 @@ func processBgpL2vpnEvpnSummary(ch chan<- prometheus.Metric, jsonBGPL2vpnEvpnSum
 	return nil
 }
 
-func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, desc map[string]*prometheus.Desc) error {
+func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, desc map[string]*prometheus.Desc, monitoredPrefixes []string) error {
 	SAFI := ""
 
 	switch AFI {
@@ -178,13 +203,13 @@ func collectBGP(ch chan<- prometheus.Metric, AFI string, logger *slog.Logger, de
 	if err != nil {
 		return err
 	}
-	if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc); err != nil {
+	if err := processBGPSummary(ch, jsonBGPSum, AFI, SAFI, logger, desc, monitoredPrefixes); err != nil {
 		return cmdOutputProcessError(cmd, string(jsonBGPSum), err)
 	}
 	return nil
 }
 
-func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc) error {
+func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI string, SAFI string, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc, monitoredPrefixes []string) error {
 	var jsonMap map[string]map[string]bgpProcess
 
 	// if we've specified SAFI in the command, we won't have the SAFI layer of array to loop through
@@ -343,6 +368,10 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 								}
 							}
 						}
+						if len(monitoredPrefixes) > 0 {
+							wg.Add(1)
+							go getPeerPrefixPresence(ch, wg, AFI, safiName[4:], vrfName, peerIP, monitoredPrefixes, logger, bgpDesc, peerLabels)
+						}
 					case "idle (admin)":
 						peerState = 2
 					}
@@ -420,6 +449,94 @@ func getPeerAcceptedFilteredRoutes(ch chan<- prometheus.Metric, wg *sync.WaitGro
 
 	newGauge(ch, bgpDesc["prefixAcceptedCount"], prefixesAccepted, peerLabels...)
 	newGauge(ch, bgpDesc["prefixFilteredCount"], prefixesReceived-prefixesAccepted, peerLabels...)
+}
+
+func loadPrefixFilter(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var prefixes []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if _, err := netip.ParsePrefix(line); err != nil {
+			return nil, fmt.Errorf("invalid prefix %q: %w", line, err)
+		}
+		prefixes = append(prefixes, line)
+	}
+	return prefixes, scanner.Err()
+}
+
+type bgpAdvertisedRoutesDetailed struct {
+	AdvertisedRoutes map[string]json.RawMessage `json:"advertisedRoutes"`
+}
+
+func processPeerPrefixPresence(ch chan<- prometheus.Metric, bgpDesc map[string]*prometheus.Desc, receivedPrefixes map[string]bool, advertisedPrefixes map[string]bool, monitoredPrefixes []string, peerLabels []string) {
+	for _, prefix := range monitoredPrefixes {
+		receivedVal := 0.0
+		if receivedPrefixes[prefix] {
+			receivedVal = 1.0
+		}
+		newGauge(ch, bgpDesc["prefixReceived"], receivedVal, append(peerLabels, prefix)...)
+
+		advertisedVal := 0.0
+		if advertisedPrefixes[prefix] {
+			advertisedVal = 1.0
+		}
+		newGauge(ch, bgpDesc["prefixAdvertised"], advertisedVal, append(peerLabels, prefix)...)
+	}
+}
+
+func getPeerPrefixPresence(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, prefixes []string, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc, peerLabels []string) {
+	defer wg.Done()
+
+	var cmdReceived, cmdAdvertised string
+	if strings.ToLower(vrfName) == "default" {
+		cmdReceived = fmt.Sprintf("show bgp  %s %s neighbors %s routes json", AFI, SAFI, neighbor)
+		cmdAdvertised = fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)
+	} else {
+		cmdReceived = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s routes json", vrfName, AFI, SAFI, neighbor)
+		cmdAdvertised = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)
+	}
+
+	receivedOutput, err := executeBGPCommand(cmdReceived)
+	if err != nil {
+		logger.Error("get neighbor received routes for prefix presence failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+	var receivedRoutes bgpRoutes
+	if err := json.Unmarshal(receivedOutput, &receivedRoutes); err != nil {
+		logger.Error("get neighbor received routes for prefix presence failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+
+	advertisedOutput, err := executeBGPCommand(cmdAdvertised)
+	if err != nil {
+		logger.Error("get neighbor advertised routes for prefix presence failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+	var advertisedRoutes bgpAdvertisedRoutesDetailed
+	if err := json.Unmarshal(advertisedOutput, &advertisedRoutes); err != nil {
+		logger.Error("get neighbor advertised routes for prefix presence failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+		return
+	}
+
+	receivedSet := make(map[string]bool, len(receivedRoutes.Routes))
+	for k := range receivedRoutes.Routes {
+		receivedSet[k] = true
+	}
+	advertisedSet := make(map[string]bool, len(advertisedRoutes.AdvertisedRoutes))
+	for k := range advertisedRoutes.AdvertisedRoutes {
+		advertisedSet[k] = true
+	}
+
+	processPeerPrefixPresence(ch, bgpDesc, receivedSet, advertisedSet, prefixes, peerLabels)
 }
 
 type bgpProcess struct {

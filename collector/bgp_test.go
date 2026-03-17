@@ -1,21 +1,23 @@
 package collector
 
 import (
+	"encoding/json"
 	"log/slog"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func runBGPSummaryTest(t *testing.T, fixture string, afi string, processFn func(chan<- prometheus.Metric, []byte, string, string, *slog.Logger, map[string]*prometheus.Desc) error, getDesc func() map[string]*prometheus.Desc, expected map[string]float64) {
+func runBGPSummaryTest(t *testing.T, fixture string, afi string, processFn func(chan<- prometheus.Metric, []byte, string, string, *slog.Logger, map[string]*prometheus.Desc, []string) error, getDesc func() map[string]*prometheus.Desc, expected map[string]float64) {
 	// load the raw JSON
 	data := readTestFixture(t, fixture)
 
 	// enough buffer for instance=0 plus instances 1,2
 	ch := make(chan prometheus.Metric, len(expected)*3)
 
-	if err := processFn(ch, data, afi, "", nil, getDesc()); err != nil {
+	if err := processFn(ch, data, afi, "", nil, getDesc(), nil); err != nil {
 		t.Errorf("error calling processFn %s: %s", afi, err)
 	}
 	close(ch)
@@ -150,6 +152,74 @@ func TestProcessBGPPeerDesc(t *testing.T) {
 	if !reflect.DeepEqual(peerDesc, expectedOutput) {
 		t.Errorf("error comparing bgp neighbor description output: %v does not match expected %v", peerDesc, expectedOutput)
 	}
+}
+
+func TestLoadPrefixFilter(t *testing.T) {
+	got, err := loadPrefixFilter(filepath.Join("testdata", "prefix_filter.txt"))
+	if err != nil {
+		t.Fatalf("loadPrefixFilter returned error: %v", err)
+	}
+
+	expected := []string{"10.0.0.0/24", "10.0.1.0/24", "fd00::/64"}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("loadPrefixFilter() = %v, want %v", got, expected)
+	}
+
+	_, err = loadPrefixFilter(filepath.Join("testdata", "prefix_filter_invalid.txt"))
+	if err == nil {
+		t.Error("loadPrefixFilter should return error for invalid prefix")
+	}
+}
+
+func TestProcessPeerPrefixPresence(t *testing.T) {
+	receivedData := readTestFixture(t, "show_bgp_ipv4_unicast_neighbors_routes.json")
+	advertisedData := readTestFixture(t, "show_bgp_ipv4_unicast_neighbors_advertised_routes.json")
+
+	var receivedRoutes bgpRoutes
+	if err := json.Unmarshal(receivedData, &receivedRoutes); err != nil {
+		t.Fatalf("cannot unmarshal received routes: %v", err)
+	}
+
+	var advertisedRoutes bgpAdvertisedRoutesDetailed
+	if err := json.Unmarshal(advertisedData, &advertisedRoutes); err != nil {
+		t.Fatalf("cannot unmarshal advertised routes: %v", err)
+	}
+
+	receivedSet := make(map[string]bool, len(receivedRoutes.Routes))
+	for k := range receivedRoutes.Routes {
+		receivedSet[k] = true
+	}
+	advertisedSet := make(map[string]bool, len(advertisedRoutes.AdvertisedRoutes))
+	for k := range advertisedRoutes.AdvertisedRoutes {
+		advertisedSet[k] = true
+	}
+
+	prefixes := []string{"10.0.0.0/24", "10.0.1.0/24", "10.0.3.0/24", "10.0.99.0/24"}
+	peerLabels := []string{"default", "ipv4", "unicast", "64512", "192.168.0.2", "64513"}
+
+	desc := getBGPDesc()
+	ch := make(chan prometheus.Metric, len(prefixes)*2)
+	processPeerPrefixPresence(ch, desc, receivedSet, advertisedSet, prefixes, peerLabels)
+	close(ch)
+
+	gotMetrics := collectMetrics(t, ch)
+
+	expected := map[string]float64{
+		// 10.0.0.0/24: received=yes, advertised=yes
+		"frr_bgp_peer_prefix_received{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.0.0/24,safi=unicast,vrf=default}":   1.0,
+		"frr_bgp_peer_prefix_advertised{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.0.0/24,safi=unicast,vrf=default}": 1.0,
+		// 10.0.1.0/24: received=yes, advertised=no
+		"frr_bgp_peer_prefix_received{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.1.0/24,safi=unicast,vrf=default}":   1.0,
+		"frr_bgp_peer_prefix_advertised{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.1.0/24,safi=unicast,vrf=default}": 0.0,
+		// 10.0.3.0/24: received=no, advertised=yes
+		"frr_bgp_peer_prefix_received{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.3.0/24,safi=unicast,vrf=default}":   0.0,
+		"frr_bgp_peer_prefix_advertised{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.3.0/24,safi=unicast,vrf=default}": 1.0,
+		// 10.0.99.0/24: received=no, advertised=no
+		"frr_bgp_peer_prefix_received{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.99.0/24,safi=unicast,vrf=default}":   0.0,
+		"frr_bgp_peer_prefix_advertised{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,prefix=10.0.99.0/24,safi=unicast,vrf=default}": 0.0,
+	}
+
+	compareMetrics(t, gotMetrics, expected)
 }
 
 func TestProcessBGPNexthop(t *testing.T) {

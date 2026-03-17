@@ -1,0 +1,29 @@
+{
+  "routes": {
+    "10.0.0.0/24": [
+      {
+        "valid": true,
+        "bestpath": true,
+        "network": "10.0.0.0/24",
+        "nexthops": [{"ip": "192.168.0.2"}]
+      }
+    ],
+    "10.0.1.0/24": [
+      {
+        "valid": true,
+        "bestpath": true,
+        "network": "10.0.1.0/24",
+        "nexthops": [{"ip": "192.168.0.2"}]
+      }
+    ],
+    "10.0.2.0/24": [
+      {
+        "valid": true,
+        "bestpath": true,
+        "network": "10.0.2.0/24",
+        "nexthops": [{"ip": "192.168.0.2"}]
+      }
+    ]
+  },
+  "totalPrefixCounter": 3
+}
