@@ -64,6 +64,9 @@ Flags:
       --[no-]collector.route     Enable the route collector (default: enabled, to disable use
                                  --no-collector.route).
       --[no-]collector.vrrp      Enable the vrrp collector (default: disabled).
+      --[no-]collector.mpls_ldp  Enable the mpls_ldp collector (default: disabled).
+      --[no-]collector.mpls_ldp.binding-in-use
+                                 Enable the frr_mpls_ldp_binding_in_use metric (default: disabled).
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
       --web.listen-address=:9342 ...
@@ -136,6 +139,7 @@ BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime 
 VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - VRRP Status<br> - VRRP State Transitions<br>
 PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
+MPLS LDP  | MPLS LDP metrics:<br> - Binding count<br> - Binding in use (if enabled)<br> - IGP Sync state<br> - Interface state<br> - Interface hello interval<br> - Interface hello holdtime<br> - Interface adjacency count<br> - Neighbor state<br> - Neighbor uptime<br> - Discovery adjacency count
 
 ### Sending commands to FRR
 
