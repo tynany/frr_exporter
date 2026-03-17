@@ -39,8 +39,10 @@ Flags:
                                  This is an option for older versions of FRR that don't have PfxSent field (default: disabled).
       --[no-]collector.bgp.accepted-filtered-prefixes
                                  Enable retrieval of accepted and filtered BGP prefix counts (default: disabled).
-      --[no-]collector.bgp.next-hop-interface  
-                                 Adds the peer's next-hop interface label. (default: disabled).                                 
+      --[no-]collector.bgp.next-hop-interface
+                                 Adds the peer's next-hop interface label. (default: disabled).
+      --collector.bgp.monitored-prefixes=""
+                                 Path to a file listing prefixes to monitor for per-peer presence (one per line, # comments allowed).
       --frr.socket.dir-path="/var/run/frr"
                                  Path of of the localstatedir containing each daemon's Unix socket.
       --frr.socket.timeout=20s   Timeout when connecting to the FRR daemon Unix sockets
@@ -214,6 +216,39 @@ an alert when the number of established BGP peers that provide internet is 1 or
 less, you'd use `sum(frr_bgp_peer_types_up{type="internet"}) <= 1`.
 
 To enable `frr_bgp_peer_types_up`, use the `--collector.bgp.peer-types` flag.
+
+### BGP: Monitored Prefix Presence
+
+FRR Exporter can monitor whether specific prefixes are received from or
+advertised to each established BGP peer by passing a file path to the
+`--collector.bgp.monitored-prefixes` flag. This is useful for alerting when an
+important prefix disappears from a peer's routes.
+
+The file should list one prefix per line. Blank lines and lines starting with
+`#` are ignored:
+
+```
+# Critical prefixes to monitor
+10.0.0.0/24
+10.1.0.0/16
+fd00::/48
+```
+
+This produces two metrics per prefix per established peer:
+
+```
+frr_bgp_peer_prefix_received{vrf, afi, safi, local_as, peer, peer_as, prefix}   1 or 0
+frr_bgp_peer_prefix_advertised{vrf, afi, safi, local_as, peer, peer_as, prefix} 1 or 0
+```
+
+A value of `1` means the prefix is present; `0` means absent. Emitting `0`
+(rather than omitting the metric) enables `== 0` alerting without `absent()`.
+
+The prefix file is read once at startup. A restart is required to pick up
+changes. Only established peers (ipv4/ipv6) are queried.
+Note that each established peer requires two additional FRR commands (received
+routes and advertised routes), so keep the number of monitored prefixes and
+peers in mind.
 
 ### OSPF: Multiple Instance Support
 [OSPF Mulit-instace](https://docs.frrouting.org/en/latest/ospfd.html#multi-instance-support)
