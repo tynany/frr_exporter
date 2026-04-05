@@ -71,6 +71,24 @@ func TestProcessStatusVersionWithMetrics(t *testing.T) {
 	compareMetrics(t, gotMetrics, expectedStatusMetrics)
 }
 
+func TestProcessStatusVersionNoOS(t *testing.T) {
+	fixture := readTestFixture(t, "show_version_no_os.txt")
+
+	version, os, err := processStatusVersion(fixture)
+	if err != nil {
+		t.Errorf("error calling processStatusVersion: %s", err)
+	}
+
+	expectedVersion := "7.5+cl5.2.0u0"
+	if version != expectedVersion {
+		t.Errorf("expected version %s, got %s", expectedVersion, version)
+	}
+
+	if os != "" {
+		t.Errorf("expected empty os, got %s", os)
+	}
+}
+
 func TestProcessStatusVersionEmpty(t *testing.T) {
 	_, _, err := processStatusVersion([]byte(""))
 	if err == nil {

@@ -83,13 +83,14 @@ func processStatusVersion(output []byte) (string, string, error) {
 	}
 	version := versionMatch[1]
 
-	// Extract OS using regex: on OS.
+	// Extract OS using regex: on OS. OS is optional as not all FRR
+	// distributions include it (e.g. Cumulus).
+	var os string
 	osRegex := regexp.MustCompile(`on (.+)\.$`)
 	osMatch := osRegex.FindStringSubmatch(firstLine)
-	if len(osMatch) < 2 {
-		return "", "", fmt.Errorf("could not extract OS from: %s", firstLine)
+	if len(osMatch) >= 2 {
+		os = osMatch[1]
 	}
-	os := osMatch[1]
 
 	return version, os, nil
 }

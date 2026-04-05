@@ -1,0 +1,2 @@
+FRRouting 7.5+cl5.2.0u0 (router).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
