@@ -7,6 +7,12 @@ set -e
 # Enable IP forwarding
 sysctl -w net.ipv4.conf.all.forwarding=1 &>/dev/null || true
 
+# Enable MPLS
+modprobe mpls_router &>/dev/null || true
+modprobe mpls_iptunnel &>/dev/null || true
+sysctl -w net.mpls.platform_labels=1000 &>/dev/null || true
+sysctl -w net.mpls.conf.eth0.input=1 &>/dev/null || true
+
 # Create VRF if kernel supports it
 if ip link add vrf-red type vrf table 10 2>/dev/null; then
     echo "Created VRF vrf-red"
