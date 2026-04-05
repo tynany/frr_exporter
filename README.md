@@ -65,6 +65,7 @@ Flags:
       --[no-]collector.pim       Enable the pim collector (default: disabled).
       --[no-]collector.route     Enable the route collector (default: enabled, to disable use
                                  --no-collector.route).
+      --[no-]collector.rpki      Enable the rpki collector (default: disabled).
       --[no-]collector.vrrp      Enable the vrrp collector (default: disabled).
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
@@ -136,6 +137,7 @@ Name | Description
 --- | ---
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime 
+RPKI | Per VRF RPKI cache-connection metrics (requires FRR compiled with `--enable-rpki`):<br> - Cache connection state (connected/disconnected)<br> - Cache connection preference
 VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - VRRP Status<br> - VRRP State Transitions<br>
 PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
 

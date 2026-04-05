@@ -1,0 +1,19 @@
+{
+  "connectedGroup":10,
+  "connections":[
+    {
+      "mode":"tcp",
+      "host":"172.20.15.59",
+      "port":"8082",
+      "preference":10,
+      "state":"connected"
+    },
+    {
+      "mode":"tcp",
+      "host":"172.20.15.60",
+      "port":"8083",
+      "preference":20,
+      "state":"disconnected"
+    }
+  ]
+}

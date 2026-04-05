@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -134,25 +133,6 @@ func emitRouteSummaryMetrics(ch chan<- prometheus.Metric, rs routeSummary, afi s
 			newGauge(ch, routeDesc["ribCount"], float64(route.Rib), labels...)
 		}
 	}
-}
-
-func getVRFs() ([]string, error) {
-	output, err := executeZebraCommand("show vrf")
-	if err != nil {
-		return nil, err
-	}
-	return parseVRFs(output), nil
-}
-
-func parseVRFs(output []byte) []string {
-	vrfs := []string{"default"}
-	for _, line := range strings.Split(string(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 2 && fields[0] == "vrf" {
-			vrfs = append(vrfs, fields[1])
-		}
-	}
-	return vrfs
 }
 
 type routeSummary struct {
