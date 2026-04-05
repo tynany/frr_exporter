@@ -1,0 +1,13 @@
+{
+  "advertisedRoutes": {
+    "10.0.0.0/24": {
+      "valid": true,
+      "network": "10.0.0.0/24"
+    },
+    "10.0.3.0/24": {
+      "valid": true,
+      "network": "10.0.3.0/24"
+    }
+  },
+  "totalPrefixCounter": 2
+}
