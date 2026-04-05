@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -154,4 +155,23 @@ func newCounter(ch chan<- prometheus.Metric, descName *prometheus.Desc, metric f
 
 func cmdOutputProcessError(cmd, output string, err error) error {
 	return fmt.Errorf("cannot process output of %s: %w: command output: %s", cmd, err, output)
+}
+
+func getVRFs() ([]string, error) {
+	output, err := executeZebraCommand("show vrf")
+	if err != nil {
+		return nil, err
+	}
+	return parseVRFs(output), nil
+}
+
+func parseVRFs(output []byte) []string {
+	vrfs := []string{"default"}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == "vrf" {
+			vrfs = append(vrfs, fields[1])
+		}
+	}
+	return vrfs
 }
