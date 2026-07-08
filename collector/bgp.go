@@ -498,11 +498,11 @@ func getPeerPrefixPresence(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI 
 
 	var cmdReceived, cmdAdvertised string
 	if strings.ToLower(vrfName) == "default" {
-		cmdReceived = fmt.Sprintf("show bgp  %s %s neighbors %s routes json", AFI, SAFI, neighbor)
-		cmdAdvertised = fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", AFI, SAFI, neighbor)
+		cmdReceived = fmt.Sprintf("show bgp  %s %s neighbors %s routes json", strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
+		cmdAdvertised = fmt.Sprintf("show bgp  %s %s neighbors %s advertised-routes json", strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
 	} else {
-		cmdReceived = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s routes json", vrfName, AFI, SAFI, neighbor)
-		cmdAdvertised = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, AFI, SAFI, neighbor)
+		cmdReceived = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s routes json", vrfName, strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
+		cmdAdvertised = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s advertised-routes json", vrfName, strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
 	}
 
 	receivedOutput, err := executeBGPCommand(cmdReceived)
