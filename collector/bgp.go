@@ -233,7 +233,7 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 
 	var peerDesc map[string]bgpVRF
 	var err error
-	if *bgpPeerTypes || *bgpPeerDescs || *bgpPeerGroups {
+	if *bgpPeerTypes || *bgpPeerDescs || *bgpPeerGroups || *bgpAcceptedFilteredPrefixes {
 		peerDesc, err = getBGPPeerDesc()
 		if err != nil {
 			return err
@@ -333,8 +333,8 @@ func processBGPSummary(ch chan<- prometheus.Metric, jsonBGPSum []byte, AFI strin
 					newGauge(ch, bgpDesc["prefixReceivedCount"], prefixReceived, peerLabels...)
 
 					if *bgpAcceptedFilteredPrefixes {
-						wg.Add(1)
-						go getPeerAcceptedFilteredRoutes(ch, wg, AFI, safiName[4:], vrfName, peerIP, prefixReceived, logger, bgpDesc, peerLabels...)
+						afiSafi := strings.ToLower(AFI) + safiName[4:]
+						processPeerAcceptedFilteredPrefixes(ch, afiSafi, peerDesc[vrfName].BGPNeighbors[peerIP].AddressFamilyInfo, prefixReceived, bgpDesc, peerLabels)
 					}
 
 					var peerDescTypes map[string]string
@@ -423,30 +423,27 @@ type bgpRoutes struct {
 	Routes map[string][]json.RawMessage `json:"routes"`
 }
 
-func getPeerAcceptedFilteredRoutes(ch chan<- prometheus.Metric, wg *sync.WaitGroup, AFI string, SAFI string, vrfName string, neighbor string, prefixesReceived float64, logger *slog.Logger, bgpDesc map[string]*prometheus.Desc, peerLabels ...string) {
-	defer wg.Done()
-
-	var cmd string
-	if strings.ToLower(vrfName) == "default" {
-		cmd = fmt.Sprintf("show bgp  %s %s neighbors %s routes json", strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
-	} else {
-		cmd = fmt.Sprintf("show bgp vrf %s %s %s neighbors %s routes json", vrfName, strings.ToLower(AFI), strings.ToLower(SAFI), neighbor)
+// processPeerAcceptedFilteredPrefixes writes the accepted and filtered prefix
+// counts for a peer using the acceptedPrefixCounter
+func processPeerAcceptedFilteredPrefixes(ch chan<- prometheus.Metric, afiSafi string, afInfo map[string]bgpNeighborAFISAFI, prefixesReceived float64, bgpDesc map[string]*prometheus.Desc, peerLabels []string) {
+	info, ok := afInfo[afiSafi]
+	if !ok {
+		// normalize the afi/safi key to handle older FRR versions that use
+		// a space-separated form (e.g. "IPv4 Unicast") instead of the camelCased
+		// form (e.g. "ipv4Unicast").
+		want := strings.ToLower(strings.ReplaceAll(afiSafi, " ", ""))
+		for k, v := range afInfo {
+			if strings.ToLower(strings.ReplaceAll(k, " ", "")) == want {
+				info, ok = v, true
+				break
+			}
+		}
 	}
-
-	output, err := executeBGPCommand(cmd)
-	if err != nil {
-		logger.Error("get neighbor accepted filtered routes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
+	if !ok {
 		return
 	}
 
-	var routes bgpRoutes
-	if err := json.Unmarshal(output, &routes); err != nil {
-		logger.Error("get neighbor accepted filtered routes failed", "afi", AFI, "safi", SAFI, "vrf", vrfName, "neighbor", neighbor, "err", err)
-		return
-	}
-
-	prefixesAccepted := float64(len(routes.Routes))
-
+	prefixesAccepted := float64(info.AcceptedPrefixCounter)
 	newGauge(ch, bgpDesc["prefixAcceptedCount"], prefixesAccepted, peerLabels...)
 	newGauge(ch, bgpDesc["prefixFilteredCount"], prefixesReceived-prefixesAccepted, peerLabels...)
 }
@@ -621,8 +618,14 @@ type bgpVRF struct {
 }
 
 type bgpNeighbor struct {
-	Desc      string `json:"nbrDesc"`
-	PeerGroup string `json:"peerGroup"`
+	Desc              string                        `json:"nbrDesc"`
+	PeerGroup         string                        `json:"peerGroup"`
+	AddressFamilyInfo map[string]bgpNeighborAFISAFI `json:"addressFamilyInfo"`
+}
+
+type bgpNeighborAFISAFI struct {
+	AcceptedPrefixCounter uint32 `json:"acceptedPrefixCounter"`
+	SentPrefixCounter     uint32 `json:"sentPrefixCounter"`
 }
 
 type bgpNextHopInterfaces struct {
