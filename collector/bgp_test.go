@@ -222,6 +222,40 @@ func TestProcessPeerPrefixPresence(t *testing.T) {
 	compareMetrics(t, gotMetrics, expected)
 }
 
+func TestProcessPeerAcceptedFilteredPrefixes(t *testing.T) {
+	peerLabels := []string{"default", "ipv4", "unicast", "64512", "192.168.0.2", "64513"}
+	desc := getBGPDesc()
+
+	// Exact key match, plus fallbacks for case ("ipv4unicast") and the
+	// space-separated form older FRR versions emit ("IPv4 Unicast").
+	for _, afInfo := range []map[string]bgpNeighborAFISAFI{
+		{"ipv4Unicast": {AcceptedPrefixCounter: 90, SentPrefixCounter: 5}},
+		{"ipv4unicast": {AcceptedPrefixCounter: 90, SentPrefixCounter: 5}},
+		{"IPv4 Unicast": {AcceptedPrefixCounter: 90, SentPrefixCounter: 5}},
+	} {
+		ch := make(chan prometheus.Metric, 2)
+		processPeerAcceptedFilteredPrefixes(ch, "ipv4Unicast", afInfo, 100.0, desc, peerLabels)
+		close(ch)
+
+		gotMetrics := collectMetrics(t, ch)
+		expected := map[string]float64{
+			"frr_bgp_peer_prefixes_accepted_count_total{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}": 90.0,
+			"frr_bgp_peer_prefixes_filtered_count_total{afi=ipv4,local_as=64512,peer=192.168.0.2,peer_as=64513,safi=unicast,vrf=default}": 10.0,
+		}
+		compareMetrics(t, gotMetrics, expected)
+	}
+
+	// No matching address family: nothing should be emitted.
+	ch := make(chan prometheus.Metric, 2)
+	processPeerAcceptedFilteredPrefixes(ch, "ipv6Unicast", map[string]bgpNeighborAFISAFI{
+		"ipv4Unicast": {AcceptedPrefixCounter: 90},
+	}, 100.0, desc, peerLabels)
+	close(ch)
+	if got := collectMetrics(t, ch); len(got) != 0 {
+		t.Errorf("expected no metrics for missing address family, got %d", len(got))
+	}
+}
+
 func TestProcessBGPNexthop(t *testing.T) {
 	expected := map[string]bgpNextHop{
 		"default": {
