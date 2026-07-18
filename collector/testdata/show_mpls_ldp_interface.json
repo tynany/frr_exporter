@@ -1,0 +1,11 @@
+{
+  "eth0: ipv4":{
+    "name":"eth0",
+    "addressFamily":"ipv4",
+    "state":"ACTIVE",
+    "upTime":"00:03:11",
+    "helloInterval":5,
+    "helloHoldtime":15,
+    "adjacencyCount":0
+  }
+}

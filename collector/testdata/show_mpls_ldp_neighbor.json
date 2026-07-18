@@ -1,0 +1,11 @@
+{
+  "neighbors":[
+    {
+      "addressFamily":"ipv4",
+      "neighborId":"1.1.1.1",
+      "state":"OPERATIONAL",
+      "transportAddress":"1.1.1.1",
+      "upTime":"00:02:21"
+    }
+  ]
+}

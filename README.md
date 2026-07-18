@@ -67,6 +67,9 @@ Flags:
                                  --no-collector.route).
       --[no-]collector.rpki      Enable the rpki collector (default: disabled).
       --[no-]collector.vrrp      Enable the vrrp collector (default: disabled).
+      --[no-]collector.mpls_ldp  Enable the mpls_ldp collector (default: disabled).
+      --[no-]collector.mpls_ldp.binding-in-use
+                                 Enable the frr_mpls_ldp_binding_in_use metric (default: disabled).
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics.
       --web.listen-address=:9342 ...
@@ -140,6 +143,7 @@ BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN E
 RPKI | Per VRF RPKI cache-connection metrics (requires FRR compiled with `--enable-rpki`):<br> - Cache connection state (connected/disconnected)<br> - Cache connection preference
 VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - VRRP Status<br> - VRRP State Transitions<br>
 PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
+MPLS LDP  | MPLS LDP metrics:<br> - Binding count<br> - Binding in use (if enabled)<br> - IGP Sync state<br> - Interface state<br> - Interface hello interval<br> - Interface hello holdtime<br> - Interface adjacency count<br> - Neighbor state<br> - Neighbor uptime<br> - Discovery adjacency count
 
 ### Sending commands to FRR
 
