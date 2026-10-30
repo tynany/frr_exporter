@@ -61,6 +61,7 @@ Flags:
       --[no-]collector.bgp       Enable the bgp collector (default: enabled, to disable use --no-collector.bgp).
       --[no-]collector.bgp6      Enable the bgp6 collector (default: disabled).
       --[no-]collector.bgpl2vpn  Enable the bgpl2vpn collector (default: disabled).
+      --[no-]collector.evpn      Enable the evpn collector (default: disabled).
       --[no-]collector.ospf      Enable the ospf collector (default: enabled, to disable use --no-collector.ospf).
       --[no-]collector.pim       Enable the pim collector (default: disabled).
       --[no-]collector.route     Enable the route collector (default: enabled, to disable use
@@ -137,6 +138,7 @@ Name | Description
 --- | ---
 BGP IPv6 | Per VRF and address family (currently support unicast only) BGP IPv6 metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime
 BGP L2VPN | Per VRF and address family (currently support EVPN only) BGP L2VPN EVPN metrics:<br> - RIB entries<br> - RIB memory usage<br> - Configured peer count<br> - Peer memory usage<br> - Configure peer group count<br> - Peer group memory usage<br> - Peer messages in<br> - Peer messages out<br> - Peer active prfixes<br> - Peer state (established/down)<br> - Peer uptime 
+EVPN | Per L2 VNI EVPN metrics (requires FRR 9.0 or later):<br> - Remote VTEPs and their flood type (HER/PIM-SM/-)
 RPKI | Per VRF RPKI cache-connection metrics (requires FRR compiled with `--enable-rpki`):<br> - Cache connection state (connected/disconnected)<br> - Cache connection preference
 VRRP | Per VRRP Interface, VrID and Protocol:<br> - Rx and TX statistics<br> - VRRP Status<br> - VRRP State Transitions<br>
 PIM | PIM metrics:<br> - Neighbor count<br> - Neighbor uptime
@@ -251,6 +253,23 @@ changes. Only established peers (ipv4/ipv6) are queried.
 Note that each established peer requires two additional FRR commands (received
 routes and advertised routes), so keep the number of monitored prefixes and
 peers in mind.
+
+### EVPN: Remote VTEP Flood Type
+
+The EVPN collector exports each remote VTEP of every L2 VNI from `show evpn vni
+detail json`, together with the flood type zebra uses for BUM traffic to it:
+
+```
+frr_evpn_vni_remote_vtep{vni="4096",remote_vtep="192.0.2.1",flood="HER"} 1
+```
+
+`flood` is `HER` (head-end replication), `PIM-SM`, or `-` when zebra has no
+flood type for the VTEP, in which case no BUM traffic (such as ARP requests) is
+sent to it. On a fabric that uses head-end replication, the alert expression
+`frr_evpn_vni_remote_vtep{flood!="HER"}` catches any remote VTEP that is cut off
+from BUM traffic.
+
+There is one time series per VNI and remote VTEP.
 
 ### OSPF: Multiple Instance Support
 [OSPF Mulit-instace](https://docs.frrouting.org/en/latest/ospfd.html#multi-instance-support)
